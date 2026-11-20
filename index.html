@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>齐天大圣·海面划船大冒险 v5.0</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; font-family: "Microsoft YaHei", sans-serif; }
+        canvas { display: block; }
+        #ui-top { position: fixed; top: 0; left: 0; right: 0; padding: 15px 25px; display: flex; justify-content: space-between; align-items: flex-start; z-index: 10; pointer-events: none; }
+        #hp-container { background: rgba(0,0,0,0.5); border-radius: 20px; padding: 8px 15px; display: flex; align-items: center; gap: 10px; }
+        #hp-label { color: #ff6b6b; font-size: 14px; font-weight: bold; text-shadow: 1px 1px 2px #000; }
+        #hp-bar-bg { width: 200px; height: 20px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden; border: 2px solid rgba(255,255,255,0.4); }
+        #hp-bar-fill { height: 100%; background: linear-gradient(90deg, #ff4444, #ff6b6b, #ff8888); border-radius: 10px; transition: width 0.3s ease; width: 100%; }
+        #hp-text { color: #fff; font-size: 14px; font-weight: bold; text-shadow: 1px 1px 2px #000; min-width: 45px; text-align: right; }
+        #left-ui-bottom { position: fixed; top: 60px; left: 25px; z-index: 10; pointer-events: none; }
+        #level-display { background: rgba(0,0,0,0.5); border-radius: 15px; padding: 6px 14px; color: #00ff88; font-size: 14px; font-weight: bold; text-shadow: 1px 1px 2px #000; margin-bottom: 8px; }
+        #distance-display { background: rgba(0,0,0,0.5); border-radius: 15px; padding: 6px 14px; color: #aaa; font-size: 13px; text-shadow: 1px 1px 2px #000; }
+        #right-ui { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+        #score-container { background: rgba(0,0,0,0.5); border-radius: 20px; padding: 8px 20px; display: flex; align-items: center; gap: 8px; }
+        #coin-icon { font-size: 20px; }
+        #score-text { color: #ffd700; font-size: 20px; font-weight: bold; text-shadow: 1px 1px 2px #000; }
+        #score-label { color: #ffd700; font-size: 14px; text-shadow: 1px 1px 2px #000; }
+        #boost-container { background: rgba(0,0,0,0.5); border-radius: 20px; padding: 8px 15px; display: flex; align-items: center; gap: 10px; min-width: 200px; }
+        #boost-label { font-size: 14px; font-weight: bold; text-shadow: 1px 1px 2px #000; white-space: nowrap; }
+        #boost-bar-bg { width: 120px; height: 16px; background: rgba(255,255,255,0.15); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.3); }
+        #boost-bar-fill { height: 100%; border-radius: 8px; transition: width 0.1s linear; width: 100%; }
+        #boost-bar-fill.ready { background: linear-gradient(90deg, #ffd700, #ffaa00); box-shadow: 0 0 10px rgba(255,215,0,0.5); }
+        #boost-bar-fill.active { background: linear-gradient(90deg, #ff4444, #ff6644); box-shadow: 0 0 15px rgba(255,68,68,0.7); animation: boostPulse 0.3s infinite alternate; }
+        #boost-bar-fill.cooling { background: linear-gradient(90deg, #4488ff, #66aaff); }
+        @keyframes boostPulse { from { opacity: 0.7; } to { opacity: 1; } }
+        #boost-status { font-size: 12px; text-shadow: 1px 1px 2px #000; white-space: nowrap; }
+        #ultimate-container { background: rgba(0,0,0,0.5); border-radius: 20px; padding: 8px 15px; display: flex; align-items: center; gap: 10px; min-width: 200px; border: 1px solid rgba(255,165,0,0.3); }
+        #ultimate-container.urgent { border-color: rgba(255,68,68,0.8); animation: urgentPulse 0.4s infinite alternate; }
+        @keyframes urgentPulse { from { box-shadow: 0 0 5px rgba(255,68,68,0.3); } to { box-shadow: 0 0 20px rgba(255,68,68,0.8); } }
+        #ultimate-label { font-size: 14px; font-weight: bold; text-shadow: 1px 1px 2px #000; white-space: nowrap; }
+        #ultimate-bar-bg { width: 120px; height: 16px; background: rgba(255,255,255,0.15); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.3); }
+        #ultimate-bar-fill { height: 100%; border-radius: 8px; transition: width 0.1s linear; width: 100%; }
+        #ultimate-bar-fill.ready { background: linear-gradient(90deg, #ffa500, #ff6600, #ff0000); box-shadow: 0 0 12px rgba(255,165,0,0.6); }
+        #ultimate-bar-fill.cooling { background: linear-gradient(90deg, #666, #999); }
+        #ultimate-status { font-size: 12px; text-shadow: 1px 1px 2px #000; white-space: nowrap; }
+        #view-indicator { position: fixed; bottom: 60px; right: 25px; background: rgba(0,0,0,0.5); border-radius: 15px; padding: 8px 16px; color: #fff; font-size: 13px; z-index: 10; text-shadow: 1px 1px 2px #000; pointer-events: none; }
+        #view-name { color: #00ff88; font-weight: bold; }
+        #controls-hint { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); border-radius: 15px; padding: 10px 25px; color: #fff; font-size: 13px; z-index: 10; text-shadow: 1px 1px 2px #000; pointer-events: none; white-space: nowrap; }
+        .key-badge { display: inline-block; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); border-radius: 5px; padding: 2px 8px; margin: 0 2px; font-weight: bold; }
+        #floating-texts { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 9; overflow: hidden; }
+        .float-text { position: absolute; font-size: 24px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.9); animation: floatUp 1s ease-out forwards; }
+        @keyframes floatUp { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-60px); opacity: 0; } }
+        #start-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; transition: opacity 0.5s ease; }
+        #start-screen.hidden { opacity: 0; pointer-events: none; }
+        #start-screen h1 { font-size: 42px; margin-bottom: 10px; text-align: center; background: linear-gradient(45deg, #ffd700, #ffaa00, #ff6600, #ffd700); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-shadow: 3px 3px 6px rgba(0,0,0,0.7), 0 0 30px rgba(255,215,0,0.3); }
+        #start-screen h2 { font-size: 18px; color: #ccc; margin-bottom: 20px; }
+        #high-score-display { background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 10px 25px; margin-bottom: 20px; text-align: center; }
+        #high-score-display p { color: #ffd700; font-size: 15px; line-height: 1.8; }
+        #start-screen .instructions { background: rgba(255,255,255,0.08); border-radius: 15px; padding: 22px 35px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.15); max-width: 660px; }
+        #start-screen .instructions p { color: #ddd; font-size: 15px; line-height: 1.9; text-align: center; }
+        #start-btn { background: linear-gradient(135deg, #ff6b6b, #ff4444); color: #fff; border: none; border-radius: 30px; padding: 14px 55px; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 20px rgba(255,68,68,0.4); transition: transform 0.2s, box-shadow 0.2s; }
+        #start-btn:hover { transform: scale(1.05); box-shadow: 0 6px 30px rgba(255,68,68,0.6); }
+        #game-over-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; transition: opacity 0.5s ease; opacity: 0; pointer-events: none; }
+        #game-over-screen.visible { opacity: 1; pointer-events: auto; }
+        #game-over-screen h1 { font-size: 56px; color: #ff4444; text-shadow: 3px 3px 6px rgba(0,0,0,0.8); margin-bottom: 20px; }
+        #game-over-screen .final-score { font-size: 28px; color: #ffd700; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
+        #game-over-screen .final-detail { font-size: 18px; color: #aaa; margin-bottom: 8px; }
+        #new-record { font-size: 22px; color: #ff4444; margin: 10px 0 25px; text-shadow: 0 0 15px rgba(255,68,68,0.5); display: none; }
+        #new-record.show { display: block; animation: recordPulse 0.5s infinite alternate; }
+        @keyframes recordPulse { from { transform: scale(1); } to { transform: scale(1.08); } }
+        #restart-btn { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #1a1a2e; border: none; border-radius: 30px; padding: 15px 60px; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 20px rgba(255,215,0,0.4); transition: transform 0.2s, box-shadow 0.2s; }
+        #restart-btn:hover { transform: scale(1.05); box-shadow: 0 6px 30px rgba(255,215,0,0.6); }
+        #pause-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        #pause-screen.visible { opacity: 1; pointer-events: auto; }
+        #pause-screen h1 { font-size: 48px; color: #fff; text-shadow: 3px 3px 8px rgba(0,0,0,0.8); margin-bottom: 30px; }
+        #pause-screen button { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 25px; padding: 12px 50px; font-size: 18px; font-weight: bold; cursor: pointer; margin: 5px; transition: background 0.2s; }
+        #pause-screen button:hover { background: rgba(255,255,255,0.25); }
+        #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ffd700; font-size: 24px; z-index: 200; }
+        .spin { display: inline-block; animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        #boost-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 5; box-shadow: inset 0 0 80px rgba(255,68,68,0.5); opacity: 0; transition: opacity 0.3s ease; }
+        #boost-overlay.active { opacity: 1; }
+        #ultimate-flash { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 6; background: radial-gradient(circle, rgba(255,165,0,0.7), rgba(255,255,255,0.95), rgba(255,165,0,0)); opacity: 0; transition: opacity 0.15s ease; }
+        #ultimate-flash.active { opacity: 1; }
+        #boss-warning { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 36px; font-weight: bold; color: #ff4444; text-shadow: 3px 3px 8px rgba(0,0,0,0.9), 0 0 20px rgba(255,68,68,0.5); z-index: 8; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; white-space: nowrap; }
+        #boss-warning.visible { opacity: 1; animation: bossWarn 0.5s infinite alternate; }
+        @keyframes bossWarn { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.1); } }
+        #boss-danger-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 4; box-shadow: inset 0 0 120px rgba(255,0,0,0.4); opacity: 0; transition: opacity 0.5s ease; }
+        #boss-danger-overlay.active { opacity: 1; }
+        #storm-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 3; background: rgba(0,0,20,0.15); opacity: 0; transition: opacity 2s ease; }
+        #storm-overlay.active { opacity: 1; }
+        #audio-toggle { position: fixed; top: 15px; right: 25px; z-index: 12; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; color: #fff; pointer-events: auto; transition: background 0.2s; display: none; }
+        #audio-toggle:hover { background: rgba(0,0,0,0.7); }
+        #audio-toggle.visible { display: flex; }
+    </style>
+</head>
+<body>
+    <div id="loading"><span class="spin">⏳</span> 加载中...</div>
+    <div id="boost-overlay"></div>
+    <div id="ultimate-flash"></div>
+    <div id="boss-warning">⚠️ 海盗船怪兽来袭！按 Q 放大招 ⚠️</div>
+    <div id="boss-danger-overlay"></div>
+    <div id="storm-overlay"></div>
+    <div id="audio-toggle">🔊</div>
+    <div id="floating-texts"></div>
+    <div id="ui-top" style="display:none;">
+        <div id="hp-container"><span id="hp-label">❤️ 血量</span><div id="hp-bar-bg"><div id="hp-bar-fill"></div></div><span id="hp-text">100</span></div>
+        <div id="right-ui">
+            <div id="score-container"><span id="coin-icon">🪙</span><span id="score-label">金币</span><span id="score-text">0</span></div>
+            <div id="boost-container"><span id="boost-label">⚡ 加速</span><div id="boost-bar-bg"><div id="boost-bar-fill" class="ready"></div></div><span id="boost-status">就绪</span></div>
+            <div id="ultimate-container"><span id="ultimate-label">🔥 大招</span><div id="ultimate-bar-bg"><div id="ultimate-bar-fill" class="ready"></div></div><span id="ultimate-status">就绪</span></div>
+        </div>
+    </div>
+    <div id="left-ui-bottom" style="display:none;">
+        <div id="level-display">🌊 第 1 关</div>
+        <div id="distance-display">🚣 0 米</div>
+    </div>
+    <div id="view-indicator" style="display:none;">视角：<span id="view-name">斜视</span> <span style="color:#aaa;">[C切换]</span></div>
+    <div id="controls-hint" style="display:none;">
+        <span class="key-badge">A</span>左移 <span class="key-badge">D</span>右移
+        &nbsp;|&nbsp; <span class="key-badge">Shift</span>加速(气垫船)
+        &nbsp;|&nbsp; <span class="key-badge">Q</span>大招
+        &nbsp;|&nbsp; <span class="key-badge">C</span>视角
+        &nbsp;|&nbsp; <span class="key-badge">P/Esc</span>暂停
+        &nbsp;|&nbsp; 🖱️鼠标拖曳·滚轮缩放
+    </div>
+    <div id="start-screen" class="hidden">
+        <h1>🐒 齐天大圣·海面划船大冒险 🌊</h1>
+        <h2>大圣出海，踏浪前行，降妖除魔！</h2>
+        <div id="high-score-display"><p>🏆 历史最高：金币 <span id="hs-score">0</span> · 距离 <span id="hs-distance">0</span>米 · 击杀 <span id="hs-kills">0</span>艘</p></div>
+        <div class="instructions">
+            <p>🚣 齐天大圣自动向前划船，无法后退</p>
+            <p><span class="key-badge">A</span> 左移 &nbsp; <span class="key-badge">D</span> 右移 &nbsp; <span class="key-badge">Shift</span> 加速冲撞 &nbsp; <span class="key-badge">Q</span> 大招</p>
+            <p>🪙 金币+10分 &nbsp; 🍑 蟠桃+20血 &nbsp; 👹 撞怪-10血 &nbsp; 🏴‍☠️ BOSS撞-15血</p>
+            <p>⚡ 加速撞翻小妖(5秒/冷却20秒)·气垫船冲击浪花 &nbsp; 🔥 大招灭海盗船(冷却10秒) &nbsp; 击杀BOSS回血+掉金币</p>
+            <p><span class="key-badge">C</span> 切换视角 &nbsp; <span class="key-badge">P/Esc</span> 暂停 &nbsp; 🖱️ 鼠标拖曳·滚轮</p>
+        </div>
+        <button id="start-btn">开始冒险</button>
+    </div>
+    <div id="pause-screen">
+        <h1>⏸ 暂停中</h1>
+        <button id="resume-btn">继续游戏</button>
+        <button id="restart-from-pause-btn">重新开始</button>
+    </div>
+    <div id="game-over-screen">
+        <h1>💀 游戏结束 💀</h1>
+        <div class="final-score">🪙 获得金币：<span id="final-score">0</span></div>
+        <div class="final-detail">🚣 航行距离：<span id="final-distance">0</span> 米</div>
+        <div class="final-detail">🏴‍☠️ 消灭海盗船：<span id="final-kills">0</span> 艘</div>
+        <div id="new-record">🎉 新纪录！🎉</div>
+        <button id="restart-btn">再来一局</button>
+    </div>
+    <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+    </script>
+    <script type="module">
+    import * as THREE from 'three';
+    // ============ 全局变量 ============
+    let scene, camera, renderer, clock;
+    let boatGroup, wukongGroup, staffGroup;
+    let oceanMesh, foamParticles, sprayParticles, rainParticles = null;
+    let hoverRings = [], hoverGlow = null, hoverSprayParticles = null;
+    let gameRunning = false, gamePaused = false;
+    let hp = 100, score = 0, distance = 0, bossKills = 0;
+    let boatX = 0, laneWidth = 4.5, spawnZ = -80;
+    let objects = [], clouds = [], hitParticles = [], destroyedMonsters = [], bossCannonballs = [];
+    let keys = {};
+    let invincibleTimer = 0, cameraShake = 0, animationId = null;
+    let ultimateEffectTimer = 0, hitStopTimer = 0;
+    let boatKnockback = { x: 0, z: 0 };
+    let boatVelocity = 0;
+    const MOVE_ACCEL = 0.025, MOVE_MAX_SPEED = 0.18, MOVE_FRICTION = 0.82;
+    let difficultyLevel = 1, baseBoatSpeed = 0.12, spawnInterval = 0.8, spawnTimer = 0;
+    let stormActive = false;
+    let boostState = 'ready', boostTimer = 0, isBoosting = false;
+    let hoverRingEmitTimer = 0;
+    const BOOST_DURATION = 5, COOLDOWN_DURATION = 20, boostSpeedMultiplier = 2.2;
+    let ultState = 'ready', ultTimer = 0;
+    const ULT_COOLDOWN = 10;
+    let bossShip = null, bossSpawnTimer = 0, bossSpawnInterval = 35;
+    let ultHitPending = false, ultHitTimer = 0;
+    let coinCombo = 0, coinComboTimer = 0, damageFlashTimer = 0;
+    const VIEWS = [
+        { name: '斜视', offset: new THREE.Vector3(0,5,8), lookAtY: 1.5, lookAtZ: -8 },
+        { name: '俯视', offset: new THREE.Vector3(0,18,2), lookAtY: 0, lookAtZ: -2 },
+        { name: '平视', offset: new THREE.Vector3(0,2.5,7), lookAtY: 1.5, lookAtZ: -15 },
+        { name: '近景', offset: new THREE.Vector3(0,3,4), lookAtY: 1.2, lookAtZ: -5 },
+        { name: '电影', offset: new THREE.Vector3(4,3,6), lookAtY: 1.0, lookAtZ: -10 },
+    ];
+    let currentViewIndex = 0;
+    let mouseDown = false, mouseX = 0, mouseY = 0;
+    let cameraYaw = 0, cameraPitch = 0, cameraDistance = 1.0;
+    let cameraTargetYaw = 0, cameraTargetPitch = 0, cameraTargetDistance = 1.0;
+    const TYPE_COIN='coin', TYPE_MONSTER='monster', TYPE_OBSTACLE='obstacle', TYPE_BOSS='boss', TYPE_HEAL='heal';
+    const MONSTER_TYPES = ['fish','crab','jellyfish','shark','octopus','seasnake'];
+    let highScore = { score: 0, distance: 0, kills: 0 };
+
+    function loadHighScore() {
+        try { const s = localStorage.getItem('wukong_highscore'); if (s) highScore = JSON.parse(s); } catch(e) {}
+        document.getElementById('hs-score').textContent = highScore.score;
+        document.getElementById('hs-distance').textContent = highScore.distance;
+        document.getElementById('hs-kills').textContent = highScore.kills;
+    }
+    function saveHighScore() {
+        let nr = false;
+        if (score > highScore.score) { highScore.score = score; nr = true; }
+        if (Math.floor(distance) > highScore.distance) { highScore.distance = Math.floor(distance); nr = true; }
+        if (bossKills > highScore.kills) { highScore.kills = bossKills; nr = true; }
+        try { localStorage.setItem('wukong_highscore', JSON.stringify(highScore)); } catch(e) {}
+        return nr;
+    }
+
+    // 音效合成系统
+    let audioCtx = null, audioEnabled = true;
+    let ambientNodes = null, boostNodes = null, bossAlarmNodes = null, ultChargeNodes = null;
+    function initAudio() {
+        if (!audioCtx) try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+        document.getElementById('audio-toggle').classList.add('visible');
+    }
+    function playSound(type) {
+        if (!audioCtx || !audioEnabled) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        if (type==='coin') { osc.type='sine'; osc.frequency.setValueAtTime(880,now); osc.frequency.exponentialRampToValueAtTime(1320,now+0.1); gain.gain.setValueAtTime(0.15,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.15); osc.start(now); osc.stop(now+0.15); }
+        else if (type==='hit') { osc.type='sawtooth'; osc.frequency.setValueAtTime(180,now); osc.frequency.exponentialRampToValueAtTime(50,now+0.2); gain.gain.setValueAtTime(0.25,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.2); osc.start(now); osc.stop(now+0.2); }
+        else if (type==='boost') { osc.type='square'; osc.frequency.setValueAtTime(220,now); osc.frequency.exponentialRampToValueAtTime(440,now+0.3); gain.gain.setValueAtTime(0.1,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.3); osc.start(now); osc.stop(now+0.3); }
+        else if (type==='ult') { osc.type='sawtooth'; osc.frequency.setValueAtTime(110,now); osc.frequency.exponentialRampToValueAtTime(880,now+0.5); gain.gain.setValueAtTime(0.2,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.6); osc.start(now); osc.stop(now+0.6); }
+        else if (type==='boss_kill') { osc.type='square'; osc.frequency.setValueAtTime(440,now); osc.frequency.exponentialRampToValueAtTime(55,now+0.8); gain.gain.setValueAtTime(0.25,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.8); osc.start(now); osc.stop(now+0.8); }
+        else if (type==='heal') { osc.type='sine'; osc.frequency.setValueAtTime(523,now); osc.frequency.setValueAtTime(659,now+0.08); osc.frequency.setValueAtTime(784,now+0.16); gain.gain.setValueAtTime(0.12,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.3); osc.start(now); osc.stop(now+0.3); }
+        else if (type==='boss_alarm') {
+            // BOSS警报声 — 连续三声急促警报
+            for (let i=0;i<3;i++) {
+                const t = now + i*0.3;
+                const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.connect(g); g.connect(audioCtx.destination);
+                o.type='sawtooth'; o.frequency.setValueAtTime(800,t); o.frequency.setValueAtTime(400,t+0.1); o.frequency.setValueAtTime(800,t+0.15);
+                g.gain.setValueAtTime(0.2,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.25);
+                o.start(t); o.stop(t+0.25);
+            }
+        }
+        else if (type==='boost_start') {
+            // 加速启动引擎声 — 低频到高频扫频
+            const o2 = audioCtx.createOscillator(), g2 = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.setValueAtTime(200,now); filter.frequency.exponentialRampToValueAtTime(3000,now+0.5);
+            o2.connect(filter); filter.connect(g2); g2.connect(audioCtx.destination);
+            o2.type='sawtooth'; o2.frequency.setValueAtTime(80,now); o2.frequency.exponentialRampToValueAtTime(300,now+0.4);
+            g2.gain.setValueAtTime(0.15,now); g2.gain.exponentialRampToValueAtTime(0.001,now+0.5);
+            o2.start(now); o2.stop(now+0.5);
+        }
+        else if (type==='ult_charge') {
+            // 大招蓄力声 — 从低频缓慢上升
+            const o2 = audioCtx.createOscillator(), g2 = audioCtx.createGain();
+            o2.connect(g2); g2.connect(audioCtx.destination);
+            o2.type='sine'; o2.frequency.setValueAtTime(200,now); o2.frequency.linearRampToValueAtTime(1200,now+0.7);
+            g2.gain.setValueAtTime(0.05,now); g2.gain.linearRampToValueAtTime(0.2,now+0.5); g2.gain.exponentialRampToValueAtTime(0.001,now+0.8);
+            o2.start(now); o2.stop(now+0.8);
+        }
+        else if (type==='ult_hit') {
+            // 大招命中爆炸声 — 巨大轰鸣
+            const o2 = audioCtx.createOscillator(), g2 = audioCtx.createGain();
+            const noise = audioCtx.createBufferSource();
+            const buf = audioCtx.createBuffer(1, audioCtx.sampleRate*0.6, audioCtx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * Math.pow(1-i/data.length, 2);
+            noise.buffer = buf;
+            const ng = audioCtx.createGain(); ng.gain.setValueAtTime(0.3,now); ng.gain.exponentialRampToValueAtTime(0.001,now+0.6);
+            noise.connect(ng); ng.connect(audioCtx.destination);
+            o2.connect(g2); g2.connect(audioCtx.destination);
+            o2.type='sawtooth'; o2.frequency.setValueAtTime(150,now); o2.frequency.exponentialRampToValueAtTime(30,now+0.5);
+            g2.gain.setValueAtTime(0.3,now); g2.gain.exponentialRampToValueAtTime(0.001,now+0.6);
+            noise.start(now); o2.start(now); o2.stop(now+0.6);
+        }
+    }
+    // 环境海浪声 — 持续循环低频白噪声
+    function startAmbient() {
+        if (!audioCtx || !audioEnabled || ambientNodes) return;
+        const buf = audioCtx.createBuffer(1, audioCtx.sampleRate*2, audioCtx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i=0;i<data.length;i++) data[i] = (Math.random()*2-1)*0.5;
+        const src = audioCtx.createBufferSource(); src.buffer = buf; src.loop = true;
+        const filter = audioCtx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=400; filter.Q.value=0.5;
+        const lfo = audioCtx.createOscillator(); const lfoGain = audioCtx.createGain();
+        lfo.frequency.value = 0.3; lfoGain.gain.value = 150;
+        lfo.connect(lfoGain); lfoGain.connect(filter.frequency);
+        const gain = audioCtx.createGain(); gain.gain.value = 0.06;
+        src.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+        src.start(); lfo.start();
+        ambientNodes = { src, lfo, gain };
+    }
+    function stopAmbient() {
+        if (!ambientNodes) return;
+        ambientNodes.src.stop(); ambientNodes.lfo.stop();
+        ambientNodes = null;
+    }
+    // 加速引擎持续声
+    function startBoostSound() {
+        if (!audioCtx || !audioEnabled || boostNodes) return;
+        const osc = audioCtx.createOscillator(), osc2 = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter(); filter.type='bandpass'; filter.frequency.value=600; filter.Q.value=3;
+        osc.type='sawtooth'; osc.frequency.value=120;
+        osc2.type='sine'; osc2.frequency.value=240;
+        osc.connect(filter); osc2.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+        gain.gain.setValueAtTime(0, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime+0.2);
+        osc.start(); osc2.start();
+        boostNodes = { osc, osc2, gain, filter };
+    }
+    function stopBoostSound() {
+        if (!boostNodes) return;
+        const now = audioCtx.currentTime;
+        boostNodes.gain.gain.cancelScheduledValues(now);
+        boostNodes.gain.gain.setValueAtTime(boostNodes.gain.gain.value, now);
+        boostNodes.gain.gain.exponentialRampToValueAtTime(0.001, now+0.2);
+        boostNodes.osc.stop(now+0.3); boostNodes.osc2.stop(now+0.3);
+        boostNodes = null;
+    }
+    // BOSS警报持续循环声
+    function startBossAlarm() {
+        if (!audioCtx || !audioEnabled || bossAlarmNodes) return;
+        const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+        const lfo = audioCtx.createOscillator(), lfoGain = audioCtx.createGain();
+        osc.type='sawtooth'; osc.frequency.value=500;
+        lfo.type='square'; lfo.frequency.value=2;
+        lfoGain.gain.value=200;
+        lfo.connect(lfoGain); lfoGain.connect(osc.frequency);
+        gain.gain.value=0.06;
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); lfo.start();
+        bossAlarmNodes = { osc, lfo, gain };
+    }
+    function stopBossAlarm() {
+        if (!bossAlarmNodes) return;
+        bossAlarmNodes.osc.stop(); bossAlarmNodes.lfo.stop();
+        bossAlarmNodes = null;
+    }
+    function toggleAudio() {
+        audioEnabled = !audioEnabled;
+        document.getElementById('audio-toggle').textContent = audioEnabled ? '🔊' : '🔇';
+        if (!audioEnabled) {
+            stopAmbient(); stopBoostSound(); stopBossAlarm();
+        } else {
+            startAmbient();
+            if (isBoosting) startBoostSound();
+            if (bossShip && !bossShip.userData.destroyed) startBossAlarm();
+        }
+    }
+
+    // 浮动文字
+    function showFloatText(text, color, sx, sy) {
+        const el = document.createElement('div'); el.className = 'float-text'; el.textContent = text;
+        el.style.color = color; el.style.left = (sx||window.innerWidth/2)+'px'; el.style.top = (sy||window.innerHeight/2)+'px';
+        document.getElementById('floating-texts').appendChild(el); setTimeout(()=>el.remove(), 1000);
+    }
+    function showFloatTextWorld(text, color, wx, wy, wz) {
+        const v = new THREE.Vector3(wx,wy,wz); v.project(camera);
+        const sx = (v.x*0.5+0.5)*window.innerWidth, sy = (-v.y*0.5+0.5)*window.innerHeight;
+        showFloatText(text, color, sx, sy);
+    }
+
+    function getCurrentSpeed() { return baseBoatSpeed * (isBoosting ? boostSpeedMultiplier : 1) * (1 + (difficultyLevel-1)*0.05); }
+
+    // ============ 初始化场景 ============
+    function initScene() {
+        scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x87CEEB, 35, 120);
+        scene.background = new THREE.Color(0x87CEEB);
+        camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 500);
+        camera.position.set(0,5,8); camera.lookAt(0,1.5,-8);
+        renderer = new THREE.WebGLRenderer({ antialias: window.devicePixelRatio < 2 });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.BasicShadowMap;
+        document.body.appendChild(renderer.domElement);
+        clock = new THREE.Clock();
+        const amb = new THREE.AmbientLight(0xffffff, 0.6); scene.add(amb); scene.userData.ambientLight = amb;
+        const sun = new THREE.DirectionalLight(0xffffff, 0.9); sun.position.set(20,30,10);
+        sun.castShadow = true; sun.shadow.camera.left=-25; sun.shadow.camera.right=25; sun.shadow.camera.top=25; sun.shadow.camera.bottom=-25;
+        sun.shadow.mapSize.width=1024; sun.shadow.mapSize.height=1024; scene.add(sun); scene.userData.sunLight = sun;
+        scene.add(new THREE.HemisphereLight(0x87CEEB, 0x4682B4, 0.4));
+        createOcean(); createFoam(); createBoat(); createClouds(); createSky(); createRain();
+    }
+
+    function createOcean() {
+        const g = new THREE.PlaneGeometry(120,350,40,120); g.rotateX(-Math.PI/2);
+        oceanMesh = new THREE.Mesh(g, new THREE.MeshPhongMaterial({color:0x1e90ff,shininess:90,transparent:true,opacity:0.88,flatShading:true}));
+        oceanMesh.position.set(0,-0.5,-120); oceanMesh.receiveShadow=false; scene.add(oceanMesh);
+        oceanMesh.userData.originalPositions = g.attributes.position.array.slice();
+    }
+    function updateOcean(time) {
+        const pos = oceanMesh.geometry.attributes.position, orig = oceanMesh.userData.originalPositions;
+        const amp = stormActive ? 0.45 : 0.25;
+        const bZ = boatGroup ? boatGroup.position.z : 2;
+        for (let i=0;i<pos.count;i++) {
+            const x=orig[i*3],z=orig[i*3+2];
+            const dz = Math.abs(z + 120 - bZ);
+            if (dz > 80) { pos.setY(i, 0); continue; }
+            pos.setY(i, Math.sin(x*0.15+time*1.8)*amp + Math.cos(z*0.12+time*1.4)*amp*0.72 + Math.sin(x*0.3+z*0.2+time*2.5)*0.08);
+        }
+        pos.needsUpdate = true; oceanMesh.geometry.computeVertexNormals();
+    }
+
+    function createFoam() {
+        const fc=50, fg=new THREE.BufferGeometry(), fp=new Float32Array(fc*3), fv=new Float32Array(fc*3), fl=new Float32Array(fc);
+        for (let i=0;i<fc;i++) { fp[i*3]=0;fp[i*3+1]=0;fp[i*3+2]=0; fv[i*3]=(Math.random()-0.5)*0.15;fv[i*3+1]=Math.random()*0.1+0.03;fv[i*3+2]=Math.random()*0.1+0.05; fl[i]=Math.random(); }
+        fg.setAttribute('position', new THREE.BufferAttribute(fp,3));
+        foamParticles = new THREE.Points(fg, new THREE.PointsMaterial({color:0xffffff,size:0.25,transparent:true,opacity:0.7,sizeAttenuation:true,depthWrite:false,blending:THREE.AdditiveBlending}));
+        foamParticles.userData = { velocities:fv, lifetimes:fl, maxLife:1.0 }; scene.add(foamParticles);
+        const sc=120, sg=new THREE.BufferGeometry(), sp=new Float32Array(sc*3), sph=new Float32Array(sc);
+        for (let i=0;i<sc;i++) { sp[i*3]=(Math.random()-0.5)*100;sp[i*3+1]=-0.3;sp[i*3+2]=-Math.random()*200+10; sph[i]=Math.random()*Math.PI*2; }
+        sg.setAttribute('position', new THREE.BufferAttribute(sp,3));
+        sprayParticles = new THREE.Points(sg, new THREE.PointsMaterial({color:0xffffff,size:0.3,transparent:true,opacity:0.5,sizeAttenuation:true,depthWrite:false}));
+        sprayParticles.userData = { phases:sph }; scene.add(sprayParticles);
+        // 气垫船冲击波纹环组（加速时激活）
+        hoverRings = [];
+        for (let i=0;i<3;i++) {
+            const rg = new THREE.RingGeometry(1.5, 1.7, 24);
+            const rm = new THREE.MeshBasicMaterial({color:0x66ccff,transparent:true,opacity:0,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false});
+            const ring = new THREE.Mesh(rg, rm);
+            ring.rotation.x = -Math.PI/2;
+            ring.position.y = -0.2;
+            ring.visible = false;
+            boatGroup.add(ring);
+            hoverRings.push({mesh:ring, timer:0, active:false});
+        }
+        // 气垫船底部喷射光晕
+        const hoverGlowGeo = new THREE.CircleGeometry(1.6, 24);
+        const hoverGlowMat = new THREE.MeshBasicMaterial({color:0x44aaff,transparent:true,opacity:0,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false});
+        hoverGlow = new THREE.Mesh(hoverGlowGeo, hoverGlowMat);
+        hoverGlow.rotation.x = -Math.PI/2;
+        hoverGlow.position.y = -0.15;
+        hoverGlow.visible = false;
+        boatGroup.add(hoverGlow);
+        // 气垫船两侧冲击水柱粒子
+        hoverSpray = [];
+        const hsCount = 40;
+        const hsGeo = new THREE.BufferGeometry();
+        const hsPos = new Float32Array(hsCount*3);
+        const hsVel = new Float32Array(hsCount*3);
+        const hsLife = new Float32Array(hsCount);
+        for (let i=0;i<hsCount;i++) { hsPos[i*3]=0;hsPos[i*3+1]=0;hsPos[i*3+2]=0; hsVel[i*3]=0;hsVel[i*3+1]=0;hsVel[i*3+2]=0; hsLife[i]=0; }
+        hsGeo.setAttribute('position', new THREE.BufferAttribute(hsPos,3));
+        hoverSprayParticles = new THREE.Points(hsGeo, new THREE.PointsMaterial({color:0xaaddff,size:0.4,transparent:true,opacity:0.8,sizeAttenuation:true,depthWrite:false,blending:THREE.AdditiveBlending}));
+        hoverSprayParticles.userData = { velocities:hsVel, lifetimes:hsLife, count:hsCount };
+        scene.add(hoverSprayParticles);
+    }
+    function updateFoam(delta, time) {
+        const pos=foamParticles.geometry.attributes.position, vel=foamParticles.userData.velocities, life=foamParticles.userData.lifetimes;
+        const bZ=boatGroup.position.z, bX=boatGroup.position.x;
+        for (let i=0;i<pos.count;i++) { life[i]-=delta*1.5; if (life[i]<=0) { pos.setXYZ(i,bX+(Math.random()-0.5)*0.8,0.2+Math.random()*0.1,bZ-1.2+(Math.random()-0.5)*0.3); vel[i*3]=(Math.random()-0.5)*0.15;vel[i*3+1]=Math.random()*0.08+0.04;vel[i*3+2]=Math.random()*0.1+0.05; life[i]=foamParticles.userData.maxLife; } else { pos.setXYZ(i,pos.getX(i)+vel[i*3]*delta*30,pos.getY(i)+vel[i*3+1]*delta*30,pos.getZ(i)+vel[i*3+2]*delta*30); vel[i*3+1]-=delta*8; } }
+        pos.needsUpdate = true; const bm=isBoosting?1.8:1.0; foamParticles.material.size=0.25*bm; foamParticles.material.opacity=isBoosting?0.9:0.7;
+        const sp=sprayParticles.geometry.attributes.position, ph=sprayParticles.userData.phases, cs=getCurrentSpeed()*0.6;
+        for (let i=0;i<sp.count;i++) { sp.setZ(i,sp.getZ(i)+cs); if (sp.getZ(i)>15) { sp.setZ(i,-200+Math.random()*20); sp.setX(i,(Math.random()-0.5)*100); } sp.setY(i,-0.3+Math.sin(time*3+ph[i])*0.15); }
+        sp.needsUpdate = true;
+
+        // ===== 气垫船冲击浪花效果 =====
+        if (isBoosting) {
+            // 底部光晕脉冲
+            if (hoverGlow) {
+                hoverGlow.visible = true;
+                hoverGlow.material.opacity = 0.35 + Math.sin(time*12)*0.15;
+                const pulseS = 1.0 + Math.sin(time*8)*0.1;
+                hoverGlow.scale.setScalar(pulseS);
+            }
+            // 冲击波纹环 — 每0.4秒发射一个新环
+            for (let i=0;i<hoverRings.length;i++) {
+                const r = hoverRings[i];
+                if (!r.active) continue;
+                r.timer += delta;
+                const p = r.timer / 1.2;
+                if (p >= 1) { r.active = false; r.mesh.visible = false; continue; }
+                const scale = 1 + p * 4;
+                r.mesh.scale.setScalar(scale);
+                r.mesh.material.opacity = (1 - p) * 0.6;
+                r.mesh.position.z = -p * 3;
+                r.mesh.visible = true;
+            }
+            // 发射新环
+            hoverRingEmitTimer += delta;
+            if (hoverRingEmitTimer >= 0.35) {
+                hoverRingEmitTimer = 0;
+                for (let i=0;i<hoverRings.length;i++) {
+                    if (!hoverRings[i].active) {
+                        hoverRings[i].active = true;
+                        hoverRings[i].timer = 0;
+                        hoverRings[i].mesh.scale.setScalar(1);
+                        hoverRings[i].mesh.position.z = 0;
+                        hoverRings[i].mesh.visible = true;
+                        break;
+                    }
+                }
+            }
+            // 两侧冲击水柱粒子
+            if (hoverSprayParticles) {
+                const hp = hoverSprayParticles.geometry.attributes.position;
+                const hv = hoverSprayParticles.userData.velocities;
+                const hl = hoverSprayParticles.userData.lifetimes;
+                const hc = hoverSprayParticles.userData.count;
+                for (let i=0;i<hc;i++) {
+                    hl[i] -= delta * 2;
+                    if (hl[i] <= 0) {
+                        const side = i % 2 === 0 ? -1 : 1;
+                        hp.setXYZ(i, bX + side * 1.0, 0.1, bZ - 0.8);
+                        hv[i*3] = side * (0.15 + Math.random() * 0.2);
+                        hv[i*3+1] = 0.2 + Math.random() * 0.3;
+                        hv[i*3+2] = -0.3 - Math.random() * 0.2;
+                        hl[i] = 1.0;
+                    } else {
+                        hp.setXYZ(i, hp.getX(i) + hv[i*3]*delta*30, hp.getY(i) + hv[i*3+1]*delta*30, hp.getZ(i) + hv[i*3+2]*delta*30);
+                        hv[i*3+1] -= delta * 6;
+                    }
+                }
+                hp.needsUpdate = true;
+                hoverSprayParticles.visible = true;
+                hoverSprayParticles.material.opacity = 0.8;
+            }
+        } else {
+            // 非加速时隐藏气垫船效果
+            if (hoverGlow) hoverGlow.visible = false;
+            for (let i=0;i<hoverRings.length;i++) { hoverRings[i].active = false; hoverRings[i].mesh.visible = false; }
+            if (hoverSprayParticles) hoverSprayParticles.visible = false;
+        }
+    }
+
+    function createRain() {
+        const rc=300, rg=new THREE.BufferGeometry(), rp=new Float32Array(rc*3);
+        for (let i=0;i<rc;i++) { rp[i*3]=(Math.random()-0.5)*80; rp[i*3+1]=Math.random()*30; rp[i*3+2]=-Math.random()*80+10; }
+        rg.setAttribute('position', new THREE.BufferAttribute(rp,3));
+        rainParticles = new THREE.Points(rg, new THREE.PointsMaterial({color:0xaaccff,size:0.15,transparent:true,opacity:0.6,sizeAttenuation:true,depthWrite:false}));
+        rainParticles.visible = false; scene.add(rainParticles);
+    }
+    function updateRain(delta) {
+        if (!rainParticles || !rainParticles.visible) return;
+        const pos = rainParticles.geometry.attributes.position;
+        for (let i=0;i<pos.count;i++) { pos.setY(i,pos.getY(i)-delta*30); pos.setZ(i,pos.getZ(i)+delta*5); if (pos.getY(i)<0) { pos.setY(i,25+Math.random()*5); pos.setX(i,(Math.random()-0.5)*80); } if (pos.getZ(i)>15) { pos.setZ(i,-70+Math.random()*10); } }
+        pos.needsUpdate = true;
+    }
+
+    function createSky() {
+        const sm = new THREE.ShaderMaterial({
+            uniforms: { uStorm: { value: 0 } },
+            vertexShader: `varying vec3 vWP; void main(){ vec4 wp=modelMatrix*vec4(position,1.0); vWP=wp.xyz; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+            fragmentShader: `varying vec3 vWP; uniform float uStorm; void main(){ float h=normalize(vWP).y; vec3 sT=vec3(0.25,0.5,0.9),sB=vec3(0.6,0.8,1.0); vec3 rT=vec3(0.12,0.12,0.18),rB=vec3(0.25,0.25,0.3); vec3 t=mix(sT,rT,uStorm),b=mix(sB,rB,uStorm); gl_FragColor=vec4(mix(b,t,max(h,0.0)),1.0);}`,
+            side: THREE.BackSide
+        });
+        scene.userData.skyMat = sm; scene.add(new THREE.Mesh(new THREE.SphereGeometry(200,32,16), sm));
+    }
+
+    function createClouds() {
+        const cm = new THREE.MeshPhongMaterial({color:0xffffff,transparent:true,opacity:0.8,flatShading:true});
+        for (let i=0;i<8;i++) { const cg=new THREE.Group(); for (let j=0;j<3+Math.floor(Math.random()*3);j++) { const s=2+Math.random()*2; const b=new THREE.Mesh(new THREE.SphereGeometry(s,8,6),cm); b.position.set((Math.random()-0.5)*5,(Math.random()-0.5)*1,(Math.random()-0.5)*3); cg.add(b); } cg.position.set((Math.random()-0.5)*80,15+Math.random()*10,-Math.random()*120); cg.userData.speed=0.02+Math.random()*0.03; scene.add(cg); clouds.push(cg); }
+    }
+    function updateClouds() { const sm=isBoosting?boostSpeedMultiplier:1; clouds.forEach(c=>{c.position.z+=c.userData.speed*sm; if(c.position.z>20){c.position.z=-120;c.position.x=(Math.random()-0.5)*80;}}); }
+
+    function createBoat() {
+        boatGroup = new THREE.Group();
+        const hullGeo = new THREE.ConeGeometry(1.2,3,8); hullGeo.rotateX(Math.PI/2);
+        const hullMat = new THREE.MeshPhongMaterial({color:0x8B4513,shininess:30});
+        const hull = new THREE.Mesh(hullGeo,hullMat); hull.scale.set(1,0.6,1); hull.position.y=0.3; hull.castShadow=true; boatGroup.add(hull);
+        const hb = new THREE.Mesh(new THREE.BoxGeometry(1.8,0.5,3), new THREE.MeshPhongMaterial({color:0x654321})); hb.position.y=0.1; hb.castShadow=true; boatGroup.add(hb);
+        const bow = new THREE.Mesh(new THREE.ConeGeometry(0.4,1,6), new THREE.MeshPhongMaterial({color:0xffd700,shininess:100})); bow.rotation.x=Math.PI/2; bow.position.set(0,0.6,-1.8); boatGroup.add(bow);
+        const stern = new THREE.Mesh(new THREE.BoxGeometry(1.6,0.8,0.3), hullMat); stern.position.set(0,0.6,1.3); boatGroup.add(stern);
+        wukongGroup = createWukong(); wukongGroup.position.set(0,0.8,0.3); boatGroup.add(wukongGroup);
+        const pg=new THREE.CylinderGeometry(0.06,0.06,2.5,6), pm=new THREE.MeshPhongMaterial({color:0x8B4513});
+        const pL=new THREE.Mesh(pg,pm); pL.rotation.z=Math.PI/3; pL.position.set(-1.2,0.9,0.3); pL.castShadow=true; pL.name='paddleL'; boatGroup.add(pL);
+        const pR=new THREE.Mesh(pg,pm); pR.rotation.z=-Math.PI/3; pR.position.set(1.2,0.9,0.3); pR.castShadow=true; pR.name='paddleR'; boatGroup.add(pR);
+        const rg=new THREE.TorusGeometry(1.8,0.08,8,32), rm=new THREE.MeshBasicMaterial({color:0xff4444,transparent:true,opacity:0,blending:THREE.AdditiveBlending});
+        const r1=new THREE.Mesh(rg,rm); r1.rotation.x=Math.PI/2; r1.position.y=0.3; r1.name='boostRing'; boatGroup.add(r1);
+        const r2=new THREE.Mesh(rg.clone(),rm.clone()); r2.rotation.x=Math.PI/2; r2.position.y=0.3; r2.name='boostRing2'; boatGroup.add(r2);
+        boatGroup.position.set(0,0.3,2); scene.add(boatGroup);
+    }
+
+    function createWukong() {
+        const g = new THREE.Group();
+        const goldMat = new THREE.MeshPhongMaterial({color:0xffd700,shininess:100,emissive:0x442200});
+        const goldBright = new THREE.MeshPhongMaterial({color:0xffdd00,shininess:120,emissive:0x664400});
+        const skinMat = new THREE.MeshPhongMaterial({color:0xFFE0BD});
+        const chestGeo = new THREE.SphereGeometry(0.38,12,10); chestGeo.scale(1,0.9,0.8);
+        const chest = new THREE.Mesh(chestGeo,goldMat); chest.position.y=0.5; chest.castShadow=true; g.add(chest);
+        const scaleMat = new THREE.MeshPhongMaterial({color:0xffaa00,shininess:80});
+        for (let i=0;i<5;i++) { const ring=new THREE.Mesh(new THREE.TorusGeometry(0.36,0.025,4,14),scaleMat); ring.rotation.x=Math.PI/2; ring.position.y=0.3+i*0.08; g.add(ring); }
+        const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.45,0.35,8), new THREE.MeshPhongMaterial({color:0xD4A017})); skirt.position.y=0.22; skirt.castShadow=true; g.add(skirt);
+        const stripeMat = new THREE.MeshPhongMaterial({color:0x3a2810});
+        for (let i=0;i<3;i++) { const st=new THREE.Mesh(new THREE.TorusGeometry(0.4,0.03,4,12),stripeMat); st.rotation.x=Math.PI/2; st.position.y=0.15+i*0.08; g.add(st); }
+        const cape = new THREE.Mesh(new THREE.ConeGeometry(0.5,1.0,8,1,true), new THREE.MeshPhongMaterial({color:0xc0392b,shininess:20,side:THREE.DoubleSide,transparent:true,opacity:0.95})); cape.position.set(0,0.4,0.25); cape.rotation.x=-Math.PI/8; cape.castShadow=true; cape.name='cape'; g.add(cape);
+        const collar = new THREE.Mesh(new THREE.TorusGeometry(0.32,0.06,6,16,Math.PI), goldMat); collar.position.set(0,0.7,0.15); collar.rotation.x=-Math.PI/2; g.add(collar);
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.3,14,12), skinMat); head.position.y=1.05; head.castShadow=true; g.add(head);
+        const crownBase = new THREE.Mesh(new THREE.CylinderGeometry(0.31,0.31,0.12,16), goldBright); crownBase.position.y=1.12; g.add(crownBase);
+        const crownTop = new THREE.Mesh(new THREE.ConeGeometry(0.28,0.2,16), goldBright); crownTop.position.y=1.28; g.add(crownTop);
+        const wingShape = new THREE.Shape(); wingShape.moveTo(0,0); wingShape.quadraticCurveTo(0.3,0.15,0.35,0); wingShape.quadraticCurveTo(0.3,-0.05,0,-0.02);
+        const wingGeo = new THREE.ExtrudeGeometry(wingShape, { depth:0.02, bevelEnabled:false });
+        const wingL = new THREE.Mesh(wingGeo, goldBright); wingL.position.set(-0.3,1.1,0); wingL.rotation.y=-Math.PI/2; wingL.scale.set(0.6,0.6,1); g.add(wingL);
+        const wingR = new THREE.Mesh(wingGeo, goldBright); wingR.position.set(0.3,1.1,0); wingR.rotation.y=Math.PI/2; wingR.scale.set(0.6,0.6,1); g.add(wingR);
+        const gem = new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6), new THREE.MeshPhongMaterial({color:0xff0066,emissive:0x990033,shininess:100})); gem.position.set(0,1.38,0.12); g.add(gem);
+        const band = new THREE.Mesh(new THREE.TorusGeometry(0.3,0.03,4,16,Math.PI), goldMat); band.position.set(0,1.12,0); band.rotation.x=-Math.PI/2; g.add(band);
+        const eyeW=new THREE.MeshPhongMaterial({color:0xffffff}), eyeP=new THREE.MeshPhongMaterial({color:0xffaa00,emissive:0xff8800,emissiveIntensity:0.6});
+        const eLW=new THREE.Mesh(new THREE.SphereGeometry(0.06,8,6),eyeW); eLW.position.set(-0.1,1.07,0.25); g.add(eLW);
+        const eRW=new THREE.Mesh(new THREE.SphereGeometry(0.06,8,6),eyeW); eRW.position.set(0.1,1.07,0.25); g.add(eRW);
+        const eLP=new THREE.Mesh(new THREE.SphereGeometry(0.035,8,6),eyeP); eLP.position.set(-0.1,1.07,0.28); g.add(eLP);
+        const eRP=new THREE.Mesh(new THREE.SphereGeometry(0.035,8,6),eyeP); eRP.position.set(0.1,1.07,0.28); g.add(eRP);
+        const mouth=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.03,0.02),new THREE.MeshPhongMaterial({color:0x8B4513})); mouth.position.set(0,0.95,0.28); g.add(mouth);
+        const armGeo=new THREE.CylinderGeometry(0.09,0.08,0.5,8);
+        const armL=new THREE.Mesh(armGeo,goldMat); armL.position.set(-0.42,0.45,0); armL.rotation.z=Math.PI/6; armL.castShadow=true; g.add(armL);
+        const armR=new THREE.Mesh(armGeo,goldMat); armR.position.set(0.42,0.45,0); armR.rotation.z=-Math.PI/6; armR.castShadow=true; g.add(armR);
+        const handGeo=new THREE.SphereGeometry(0.07,8,6);
+        const handL=new THREE.Mesh(handGeo,skinMat); handL.position.set(-0.55,0.22,0); g.add(handL);
+        const handR=new THREE.Mesh(handGeo,skinMat); handR.position.set(0.55,0.22,0); g.add(handR);
+        const bootGeo=new THREE.BoxGeometry(0.18,0.12,0.28), bootMat=new THREE.MeshPhongMaterial({color:0xffd700,shininess:60});
+        const bootL=new THREE.Mesh(bootGeo,bootMat); bootL.position.set(-0.18,0.06,0.05); bootL.castShadow=true; g.add(bootL);
+        const bootR=new THREE.Mesh(bootGeo,bootMat); bootR.position.set(0.18,0.06,0.05); bootR.castShadow=true; g.add(bootR);
+        const cuffGeo=new THREE.TorusGeometry(0.1,0.025,4,12), cuffMat=new THREE.MeshPhongMaterial({color:0xff6600});
+        const cuffL=new THREE.Mesh(cuffGeo,cuffMat); cuffL.position.set(-0.18,0.12,0.05); cuffL.rotation.x=Math.PI/2; g.add(cuffL);
+        const cuffR=new THREE.Mesh(cuffGeo,cuffMat); cuffR.position.set(0.18,0.12,0.05); cuffR.rotation.x=Math.PI/2; g.add(cuffR);
+        staffGroup = new THREE.Group();
+        const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,1.8,12), new THREE.MeshPhongMaterial({color:0xffd700,shininess:100,emissive:0x332200})); staff.castShadow=true; staffGroup.add(staff);
+        const capMat=new THREE.MeshPhongMaterial({color:0xffd700,shininess:100});
+        const cap1=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.12,12),capMat); cap1.position.y=0.85; staffGroup.add(cap1);
+        const cap2=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.12,12),capMat); cap2.position.y=-0.85; staffGroup.add(cap2);
+        const ringMat2=new THREE.MeshPhongMaterial({color:0xff4400});
+        const r1b=new THREE.Mesh(new THREE.TorusGeometry(0.07,0.015,4,12),ringMat2); r1b.position.y=0.78; r1b.rotation.x=Math.PI/2; staffGroup.add(r1b);
+        const r2b=new THREE.Mesh(new THREE.TorusGeometry(0.07,0.015,4,12),ringMat2); r2b.position.y=-0.78; r2b.rotation.x=Math.PI/2; staffGroup.add(r2b);
+        const staffGlow=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,1.8,12),new THREE.MeshBasicMaterial({color:0xffaa00,transparent:true,opacity:0.2,blending:THREE.AdditiveBlending})); staffGroup.add(staffGlow);
+        staffGroup.position.set(0.55,0.6,0.1); staffGroup.rotation.z=-Math.PI/5; staffGroup.name='staff'; g.add(staffGroup);
+        g.userData.head=head; g.userData.cape=cape; g.userData.staffGroup=staffGroup;
+        return g;
+    }
+
+    function createCoin() {
+        const g = new THREE.Group();
+        const c=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.4,0.08,20),new THREE.MeshPhongMaterial({color:0xffd700,emissive:0x886600,shininess:100})); c.rotation.x=Math.PI/2; c.castShadow=true; g.add(c);
+        g.add(new THREE.Mesh(new THREE.TorusGeometry(0.25,0.03,6,16),new THREE.MeshPhongMaterial({color:0xff4444,emissive:0x330000})));
+        g.position.y=1.0; g.userData={type:TYPE_COIN,passed:false,collecting:false,collectScale:1}; return g;
+    }
+
+    function createHeal() {
+        const g = new THREE.Group();
+        const peachGeo=new THREE.SphereGeometry(0.35,12,10); peachGeo.scale(1,0.9,1);
+        const peach=new THREE.Mesh(peachGeo,new THREE.MeshPhongMaterial({color:0xff6b9d,emissive:0x330011,shininess:40})); peach.castShadow=true; g.add(peach);
+        const groove=new THREE.Mesh(new THREE.TorusGeometry(0.1,0.02,4,12),new THREE.MeshPhongMaterial({color:0xcc4477})); groove.position.set(0,0,0.3); groove.rotation.x=Math.PI/2; g.add(groove);
+        const leaf=new THREE.Mesh(new THREE.ConeGeometry(0.08,0.25,5),new THREE.MeshPhongMaterial({color:0x228B22})); leaf.position.set(0.15,0.3,0); leaf.rotation.z=-0.5; g.add(leaf);
+        const glow=new THREE.Mesh(new THREE.TorusGeometry(0.45,0.04,6,20),new THREE.MeshBasicMaterial({color:0xff69b4,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending})); glow.rotation.x=Math.PI/2; g.add(glow);
+        g.position.y=1.0; g.userData={type:TYPE_HEAL,passed:false,collecting:false,collectScale:1,glow:glow}; return g;
+    }
+
+    function createMonster() {
+        const type=MONSTER_TYPES[Math.floor(Math.random()*MONSTER_TYPES.length)];
+        const g=new THREE.Group();
+        const redEye=new THREE.MeshPhongMaterial({color:0xff0000,emissive:0xff0000,emissiveIntensity:0.8}), whiteMat=new THREE.MeshPhongMaterial({color:0xffffff});
+        if (type==='fish') {
+            const body=new THREE.Mesh(new THREE.SphereGeometry(0.6,10,8),new THREE.MeshPhongMaterial({color:0x2E8B57,flatShading:true})); body.scale.set(1.2,0.8,1.5); body.castShadow=true; g.add(body);
+            const tail=new THREE.Mesh(new THREE.ConeGeometry(0.3,0.6,6),body.material); tail.rotation.y=Math.PI/2; tail.position.set(0.8,0,0); g.add(tail);
+            const eL=new THREE.Mesh(new THREE.SphereGeometry(0.1,8,6),redEye); eL.position.set(-0.35,0.2,0.4); g.add(eL);
+            const eR=new THREE.Mesh(new THREE.SphereGeometry(0.1,8,6),redEye); eR.position.set(-0.35,0.2,-0.4); g.add(eR);
+            for(let i=0;i<4;i++){const t=new THREE.Mesh(new THREE.ConeGeometry(0.06,0.15,4),whiteMat);t.position.set(-0.5,-0.1,-0.15+i*0.1);t.rotation.z=Math.PI;g.add(t);}
+            g.position.y=0.3;
+        } else if (type==='crab') {
+            const body=new THREE.Mesh(new THREE.SphereGeometry(0.5,10,8),new THREE.MeshPhongMaterial({color:0xCD5C5C,flatShading:true})); body.scale.set(1.3,0.5,1); body.castShadow=true; g.add(body);
+            const cg=new THREE.BoxGeometry(0.35,0.25,0.2);
+            const cL=new THREE.Mesh(cg,body.material); cL.position.set(-0.7,0.1,0.3); cL.rotation.z=Math.PI/4; g.add(cL);
+            const cR=new THREE.Mesh(cg,body.material); cR.position.set(0.7,0.1,0.3); cR.rotation.z=-Math.PI/4; g.add(cR);
+            const sg2=new THREE.CylinderGeometry(0.04,0.04,0.25,6);
+            const sL=new THREE.Mesh(sg2,body.material); sL.position.set(-0.2,0.35,0.15); g.add(sL);
+            const sR=new THREE.Mesh(sg2,body.material); sR.position.set(0.2,0.35,0.15); g.add(sR);
+            const eL=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),redEye); eL.position.set(-0.2,0.5,0.15); g.add(eL);
+            const eR=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),redEye); eR.position.set(0.2,0.5,0.15); g.add(eR);
+            const lg=new THREE.CylinderGeometry(0.05,0.05,0.4,5);
+            for(let i=0;i<6;i++){const l=new THREE.Mesh(lg,body.material);const a=(i-2.5)*0.4;l.position.set(Math.cos(a)*0.5,-0.15,Math.sin(a)*0.4);l.rotation.z=a;g.add(l);}
+            g.position.y=0.2;
+        } else if (type==='jellyfish') {
+            const dome=new THREE.Mesh(new THREE.SphereGeometry(0.55,12,8,0,Math.PI*2,0,Math.PI/2),new THREE.MeshPhongMaterial({color:0x9932CC,transparent:true,opacity:0.75,flatShading:true})); dome.castShadow=true; g.add(dome);
+            const tMat=new THREE.MeshPhongMaterial({color:0x9370DB});
+            for(let i=0;i<8;i++){const t=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.08,0.7+Math.random()*0.3,5),tMat);const a=(i/8)*Math.PI*2;t.position.set(Math.cos(a)*0.3,-0.35,Math.sin(a)*0.3);g.add(t);}
+            const yEye=new THREE.MeshPhongMaterial({color:0xffff00,emissive:0xffff00,emissiveIntensity:0.7});
+            const eL=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),yEye); eL.position.set(-0.15,0.05,0.2); g.add(eL);
+            const eR=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),yEye); eR.position.set(0.15,0.05,0.2); g.add(eR);
+            g.position.y=0.8; g.userData.floatBase=0.8;
+        } else if (type==='shark') {
+            const body=new THREE.Mesh(new THREE.ConeGeometry(0.45,2,8),new THREE.MeshPhongMaterial({color:0x4a4a4a,flatShading:true})); body.rotation.x=-Math.PI/2; body.scale.set(1,1,1.5); body.castShadow=true; g.add(body);
+            const dorsal=new THREE.Mesh(new THREE.ConeGeometry(0.25,0.5,4),body.material); dorsal.position.set(0,0.35,0.3); g.add(dorsal);
+            const tailFin=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.5,0.3),body.material); tailFin.position.set(0,0.1,0.95); g.add(tailFin);
+            const m=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.15,0.15),new THREE.MeshPhongMaterial({color:0x1a1a1a})); m.position.set(0,-0.05,-0.9); g.add(m);
+            for(let i=0;i<5;i++){const t=new THREE.Mesh(new THREE.ConeGeometry(0.04,0.12,4),whiteMat);t.position.set(-0.12+i*0.06,-0.05,-0.98);t.rotation.x=Math.PI;g.add(t);}
+            const eL=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),redEye); eL.position.set(-0.15,0.15,-0.5); g.add(eL);
+            const eR=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),redEye); eR.position.set(0.15,0.15,-0.5); g.add(eR);
+            g.position.y=0.2;
+        } else if (type==='octopus') {
+            const head=new THREE.Mesh(new THREE.SphereGeometry(0.5,12,10),new THREE.MeshPhongMaterial({color:0x8B0045,flatShading:true})); head.scale.set(1,1.2,1); head.castShadow=true; g.add(head);
+            const tMat=head.material;
+            for(let i=0;i<8;i++){const a=(i/8)*Math.PI*2;const tent=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.12,0.6,6),tMat);tent.position.set(Math.cos(a)*0.35,-0.35,Math.sin(a)*0.35);tent.rotation.x=Math.sin(a)*0.4;tent.rotation.z=-Math.cos(a)*0.4;tent.castShadow=true;g.add(tent);}
+            const oEye=new THREE.MeshPhongMaterial({color:0xffaa00,emissive:0xff6600,emissiveIntensity:0.6});
+            const eL=new THREE.Mesh(new THREE.SphereGeometry(0.12,8,6),oEye); eL.position.set(-0.18,0.15,0.35); eL.scale.set(1,1.5,1); g.add(eL);
+            const eR=new THREE.Mesh(new THREE.SphereGeometry(0.12,8,6),oEye); eR.position.set(0.18,0.15,0.35); eR.scale.set(1,1.5,1); g.add(eR);
+            g.position.y=0.4;
+        } else {
+            const bMat=new THREE.MeshPhongMaterial({color:0x3a6b3a,flatShading:true});
+            for(let i=0;i<6;i++){const seg=new THREE.Mesh(new THREE.SphereGeometry(0.18-i*0.015,8,6),bMat);seg.position.set(0,0.2,-0.5+i*0.18);seg.castShadow=true;g.add(seg);}
+            const sh=new THREE.Mesh(new THREE.SphereGeometry(0.2,10,8),bMat); sh.position.set(0,0.25,0.65); sh.scale.set(1,0.8,1.3); g.add(sh);
+            const tongue=new THREE.Mesh(new THREE.ConeGeometry(0.03,0.2,4),new THREE.MeshPhongMaterial({color:0xff0066})); tongue.position.set(0,0.2,0.9); tongue.rotation.x=Math.PI/2; g.add(tongue);
+            const eL=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6),redEye); eL.position.set(-0.08,0.3,0.6); g.add(eL);
+            const eR=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6),redEye); eR.position.set(0.08,0.3,0.6); g.add(eR);
+            g.position.y=0.1;
+        }
+        g.userData={type:TYPE_MONSTER,monsterType:type,destroyed:false,passed:false}; return g;
+    }
+
+    function createBossShip() {
+        const g=new THREE.Group();
+        const dwMat=new THREE.MeshPhongMaterial({color:0x2a1a0a,shininess:20}), wMat=new THREE.MeshPhongMaterial({color:0x3a2a1a,shininess:20}), boneMat=new THREE.MeshPhongMaterial({color:0xdddddd,shininess:10});
+        const hullGeo=new THREE.ConeGeometry(2.5,8,8); hullGeo.rotateX(Math.PI/2);
+        const hull=new THREE.Mesh(hullGeo,dwMat); hull.scale.set(1.2,1,1); hull.position.y=0.5; hull.castShadow=true; g.add(hull);
+        const deck=new THREE.Mesh(new THREE.BoxGeometry(4,0.3,7),wMat); deck.position.y=1.0; deck.castShadow=true; g.add(deck);
+        const railGeo=new THREE.BoxGeometry(0.2,0.6,6);
+        g.add(Object.assign(new THREE.Mesh(railGeo,dwMat),{position:new THREE.Vector3(-2,1.3,0)}));
+        g.add(Object.assign(new THREE.Mesh(railGeo,dwMat),{position:new THREE.Vector3(2,1.3,0)}));
+        const mastGeo=new THREE.CylinderGeometry(0.12,0.15,4,8);
+        for(let i=0;i<3;i++){const m=new THREE.Mesh(mastGeo,wMat);m.position.set(0,3,-2.5+i*2.5);m.castShadow=true;g.add(m);}
+        const sailMat=new THREE.MeshPhongMaterial({color:0x1a1a1a,side:THREE.DoubleSide,transparent:true,opacity:0.9}), sailGeo=new THREE.PlaneGeometry(3.5,2.5);
+        const s1=new THREE.Mesh(sailGeo,sailMat); s1.position.set(0,3.2,-2.5); g.add(s1);
+        const s2=new THREE.Mesh(sailGeo.clone(),sailMat.clone()); s2.position.set(0,3.2,0); g.add(s2);
+        const s3=new THREE.Mesh(sailGeo.clone(),sailMat.clone()); s3.position.set(0,3.2,2.5); g.add(s3);
+        const skull=new THREE.Mesh(new THREE.SphereGeometry(0.4,10,8),boneMat); skull.position.set(0,3.3,0.01); skull.scale.set(1,1.1,0.3); g.add(skull);
+        const eSockMat=new THREE.MeshBasicMaterial({color:0x000000});
+        g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),eSockMat),{position:new THREE.Vector3(-0.13,3.35,0.12)}));
+        g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),eSockMat),{position:new THREE.Vector3(0.13,3.35,0.12)}));
+        const boneGeo=new THREE.CylinderGeometry(0.05,0.05,0.6,6);
+        const b1=new THREE.Mesh(boneGeo,boneMat); b1.position.set(0,2.7,0.01); b1.rotation.z=Math.PI/4; g.add(b1);
+        const b2=new THREE.Mesh(boneGeo,boneMat); b2.position.set(0,2.7,0.01); b2.rotation.z=-Math.PI/4; g.add(b2);
+        const fhMat=new THREE.MeshPhongMaterial({color:0x660000,shininess:30,emissive:0x220000});
+        const fh=new THREE.Mesh(new THREE.SphereGeometry(0.5,10,8),fhMat); fh.position.set(0,1.2,-4.2); fh.castShadow=true; g.add(fh);
+        const hornGeo=new THREE.ConeGeometry(0.1,0.4,6);
+        const hL=new THREE.Mesh(hornGeo,fhMat); hL.position.set(-0.25,1.7,-4.2); hL.rotation.z=-0.3; g.add(hL);
+        const hR=new THREE.Mesh(hornGeo,fhMat); hR.position.set(0.25,1.7,-4.2); hR.rotation.z=0.3; g.add(hR);
+        const bEyeMat=new THREE.MeshPhongMaterial({color:0xff0000,emissive:0xff0000,emissiveIntensity:1.0});
+        g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),bEyeMat),{position:new THREE.Vector3(-0.15,1.3,-4.55)}));
+        g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),bEyeMat),{position:new THREE.Vector3(0.15,1.3,-4.55)}));
+        const cannonGeo=new THREE.CylinderGeometry(0.15,0.18,0.8,10), cannonMat=new THREE.MeshPhongMaterial({color:0x333333,shininess:50});
+        for(let i=0;i<2;i++){const cL=new THREE.Mesh(cannonGeo,cannonMat);cL.position.set(-1.8,1.4,-1+i*2);cL.rotation.z=Math.PI/2;cL.rotation.y=-Math.PI/2;g.add(cL); const cR=new THREE.Mesh(cannonGeo,cannonMat);cR.position.set(1.8,1.4,-1+i*2);cR.rotation.z=Math.PI/2;cR.rotation.y=Math.PI/2;g.add(cR);}
+        const crewMat=new THREE.MeshPhongMaterial({color:0x1a4a1a,flatShading:true});
+        for(let i=0;i<3;i++){const crew=new THREE.Group();const cB=new THREE.Mesh(new THREE.SphereGeometry(0.2,8,6),crewMat);cB.castShadow=true;crew.add(cB);crew.position.set((Math.random()-0.5)*2,1.3,-1.5+i*1.5);g.add(crew);}
+        const hpBg=new THREE.Mesh(new THREE.PlaneGeometry(4,0.3),new THREE.MeshBasicMaterial({color:0x333333})); hpBg.position.set(0,5.5,0); g.add(hpBg);
+        const hpFill=new THREE.Mesh(new THREE.PlaneGeometry(4,0.25),new THREE.MeshBasicMaterial({color:0xff3333})); hpFill.position.set(0,5.5,0.01); g.add(hpFill);
+        g.userData={type:TYPE_BOSS,destroyed:false,hpBarFill:hpFill,hpBarBg:hpBg,cannonTimer:0}; return g;
+    }
+
+    function createCannonball(bossPos) {
+        const g=new THREE.Group();
+        g.add(new THREE.Mesh(new THREE.SphereGeometry(0.2,10,8),new THREE.MeshPhongMaterial({color:0x1a1a1a,emissive:0x330000})));
+        const trail=new THREE.Mesh(new THREE.SphereGeometry(0.15,8,6),new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending})); g.add(trail);
+        g.position.copy(bossPos); g.position.y=1.5;
+        const dx=boatGroup.position.x-bossPos.x, dz=boatGroup.position.z-bossPos.z, dist=Math.sqrt(dx*dx+dz*dz);
+        g.userData={vx:(dx/dist)*0.3,vy:0.15,vz:(dz/dist)*0.3,trail:trail};
+        scene.add(g); bossCannonballs.push(g);
+    }
+
+    function updateCannonballs(delta) {
+        for (let i=bossCannonballs.length-1;i>=0;i--) {
+            const cb=bossCannonballs[i];
+            cb.position.x+=cb.userData.vx; cb.position.y+=cb.userData.vy; cb.position.z+=cb.userData.vz;
+            cb.userData.vy-=0.012;
+            if (cb.userData.trail) { cb.userData.trail.material.opacity=0.3+Math.random()*0.4; cb.userData.trail.scale.setScalar(0.8+Math.random()*0.5); }
+            if (Math.abs(cb.position.x-boatGroup.position.x)<1.2 && Math.abs(cb.position.z-boatGroup.position.z)<1.3 && Math.abs(cb.position.y-1)<1.5) {
+                if (invincibleTimer<=0) { takeDamage(10); spawnHitParticles(cb.position.x,cb.position.y,cb.position.z,0xff6600); }
+                scene.remove(cb); bossCannonballs.splice(i,1); continue;
+            }
+            if (cb.position.y<-0.5||cb.position.z>15) { if (cb.position.y<-0.5) spawnHitParticles(cb.position.x,0,cb.position.z,0xffffff,6); scene.remove(cb); bossCannonballs.splice(i,1); }
+        }
+    }
+
+    function createObstacle() {
+        const g=new THREE.Group();
+        const rockMat=new THREE.MeshPhongMaterial({color:0x555555,flatShading:true});
+        const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(0.7,0),rockMat); rock.scale.set(1.2,0.8,1); rock.position.y=0.2; rock.castShadow=true; g.add(rock);
+        const sr1=new THREE.Mesh(new THREE.DodecahedronGeometry(0.3,0),rockMat); sr1.position.set(0.5,0,0.2); sr1.castShadow=true; g.add(sr1);
+        const sr2=new THREE.Mesh(new THREE.DodecahedronGeometry(0.3,0),rockMat); sr2.position.set(-0.4,0.1,-0.3); sr2.scale.set(0.8,0.6,0.8); sr2.castShadow=true; g.add(sr2);
+        const swg=new THREE.CylinderGeometry(0.02,0.05,0.6,5), swm=new THREE.MeshPhongMaterial({color:0x228B22});
+        for(let i=0;i<3;i++){const sw=new THREE.Mesh(swg,swm);sw.position.set((Math.random()-0.5)*0.8,0.5,(Math.random()-0.5)*0.5);g.add(sw);}
+        g.userData={type:TYPE_OBSTACLE,destroyed:false,passed:false}; return g;
+    }
+
+    function spawnObject() {
+        const r=Math.random(); let obj;
+        if (r<0.05) obj=createHeal(); else if (r<0.50) obj=createCoin(); else if (r<0.78) obj=createMonster(); else obj=createObstacle();
+        const lane=Math.floor(Math.random()*3)-1; obj.position.x=lane*2.2; obj.position.z=spawnZ; scene.add(obj); objects.push(obj);
+    }
+    function trySpawnBoss() {
+        if (bossShip&&!bossShip.userData.destroyed) return;
+        bossShip=createBossShip(); bossShip.position.set(0,0.3,spawnZ-20); scene.add(bossShip);
+        const warn=document.getElementById('boss-warning'); warn.classList.add('visible'); setTimeout(()=>warn.classList.remove('visible'),3000);
+        playSound('boss_alarm'); startBossAlarm();
+    }
+
+    // 连续碰撞检测
+    function checkCollisionContinuous(obj, prevZ) {
+        const dx=Math.abs(boatGroup.position.x-obj.position.x);
+        const bZ=boatGroup.position.z, cs=bZ-1.5, ce=bZ+1.5;
+        const zMin=Math.min(prevZ,obj.position.z), zMax=Math.max(prevZ,obj.position.z);
+        return dx<1.3 && zMin<=ce && zMax>=cs;
+    }
+    function checkBossCollision() {
+        if (!bossShip||bossShip.userData.destroyed) return false;
+        return Math.abs(boatGroup.position.x-bossShip.position.x)<3.5 && Math.abs(boatGroup.position.z-bossShip.position.z)<4.5;
+    }
+
+    // 打击感
+    function triggerHitStop(d) { hitStopTimer=d; }
+    function triggerKnockback(dirX) { boatKnockback.x=dirX*0.5; boatKnockback.z=0.3; }
+    function spawnHitParticles(x,y,z,color,count) {
+        count=count||10;
+        for (let i=0;i<count;i++) {
+            const p=new THREE.Mesh(new THREE.SphereGeometry(0.06+Math.random()*0.04,6,4),new THREE.MeshBasicMaterial({color:color,transparent:true,opacity:1}));
+            p.position.set(x,y,z); p.userData={vx:(Math.random()-0.5)*0.3,vy:0.1+Math.random()*0.15,vz:(Math.random()-0.5)*0.3,life:0.6};
+            scene.add(p); hitParticles.push(p);
+        }
+    }
+    function updateHitParticles(delta) {
+        for (let i=hitParticles.length-1;i>=0;i--) {
+            const p=hitParticles[i];
+            p.position.x+=p.userData.vx; p.position.y+=p.userData.vy; p.position.z+=p.userData.vz+getCurrentSpeed()*0.6;
+            p.userData.vy-=0.015; p.userData.life-=delta;
+            p.material.opacity=Math.max(0,p.userData.life/0.6); p.scale.setScalar(Math.max(0.1,p.userData.life/0.6));
+            if (p.userData.life<=0) { scene.remove(p); p.geometry.dispose(); p.material.dispose(); hitParticles.splice(i,1); }
+        }
+    }
+
+    function destroyMonster(m) {
+        if (m.userData.destroyed) return;
+        m.userData.destroyed=true;
+        m.userData.destroyVel={x:(Math.random()-0.5)*0.4,y:0.25+Math.random()*0.15,z:0.2+Math.random()*0.1};
+        m.userData.destroyRot={x:(Math.random()-0.5)*0.3,y:(Math.random()-0.5)*0.3,z:(Math.random()-0.5)*0.3};
+        m.userData.destroyTimer=0; score+=5; updateUI();
+        spawnHitParticles(m.position.x,m.position.y+0.3,m.position.z,0xff4444,8);
+        showFloatTextWorld('+5','#ff4444',m.position.x,m.position.y+1,m.position.z);
+        playSound('hit'); destroyedMonsters.push(m);
+    }
+    function updateDestroyedMonsters(delta) {
+        for (let i=destroyedMonsters.length-1;i>=0;i--) {
+            const m=destroyedMonsters[i]; m.userData.destroyTimer+=delta;
+            const v=m.userData.destroyVel,r=m.userData.destroyRot;
+            m.position.x+=v.x; m.position.y+=v.y; m.position.z+=v.z+getCurrentSpeed()*0.6; v.y-=0.015;
+            m.rotation.x+=r.x; m.rotation.y+=r.y; m.rotation.z+=r.z;
+            if (m.userData.destroyTimer>1.5) { const fp=(m.userData.destroyTimer-1.5)/0.5; m.traverse(c=>{if(c.material){if(!c.userData.o)c.userData.o=c.material.opacity||1;c.material.transparent=true;c.material.opacity=c.userData.o*(1-fp);}}); }
+            if (m.userData.destroyTimer>2.0||m.position.y<-5) { scene.remove(m); m.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();}); destroyedMonsters.splice(i,1); const idx=objects.indexOf(m); if(idx>-1)objects.splice(idx,1); }
+        }
+    }
+
+    // 大招
+    function triggerUltimate() {
+        if (ultState!=='ready') return;
+        if (!bossShip||bossShip.userData.destroyed) return;
+        ultState='cooling'; ultTimer=ULT_COOLDOWN; ultimateEffectTimer=1.5; cameraShake=0.8; playSound('ult_charge');
+        ultHitPending=true; ultHitTimer=0.8;
+        stopBossAlarm();
+    }
+    function destroyBoss() {
+        if (!bossShip||bossShip.userData.destroyed) return;
+        bossShip.userData.destroyed=true;
+        bossShip.userData.destroyVel={x:0,y:0.15,z:0.3}; bossShip.userData.destroyRot={x:0.15,y:0.05,z:0}; bossShip.userData.destroyTimer=0;
+        bossKills++; score+=50; hp=Math.min(100,hp+20);
+        for (let i=0;i<3;i++) { const coin=createCoin(); coin.position.set(bossShip.position.x+(i-1)*1.5,1.0,bossShip.position.z); scene.add(coin); objects.push(coin); }
+        updateUI();
+        spawnHitParticles(bossShip.position.x,bossShip.position.y+2,bossShip.position.z,0xffd700,30);
+        showFloatTextWorld('+50 击杀!','#ffd700',bossShip.position.x,bossShip.position.y+3,bossShip.position.z);
+        showFloatTextWorld('+20 血!','#ff69b4',boatGroup.position.x,boatGroup.position.y+2,boatGroup.position.z);
+        playSound('ult_hit');
+        const fl=document.getElementById('ultimate-flash'); fl.classList.add('active'); setTimeout(()=>fl.classList.remove('active'),300);
+        destroyedMonsters.push(bossShip);
+        document.getElementById('boss-danger-overlay').classList.remove('active');
+        document.getElementById('ultimate-container').classList.remove('urgent');
+        stopBossAlarm();
+    }
+    function updateUltimateEffect(delta,time) {
+        if (ultimateEffectTimer>0) {
+            ultimateEffectTimer-=delta;
+            if (staffGroup) { const p=1-ultimateEffectTimer/1.5, s=1+p*4; staffGroup.scale.set(s,s,s); staffGroup.rotation.y=time*15; staffGroup.rotation.z=-Math.PI/2+Math.sin(time*10)*0.3; }
+        } else { if (staffGroup) { staffGroup.scale.set(1,1,1); staffGroup.rotation.y=0; staffGroup.rotation.z=-Math.PI/5; } }
+        if (ultHitPending) { ultHitTimer-=delta; if (ultHitTimer<=0) { ultHitPending=false; destroyBoss(); } }
+    }
+
+    function takeDamage(amount) {
+        if (invincibleTimer>0) return;
+        const dmg=amount||10; hp-=dmg; invincibleTimer=1.0; cameraShake=0.4;
+        triggerHitStop(0.05); triggerKnockback(Math.random()>0.5?1:-1);
+        boatGroup.traverse(c=>{if(c.isMesh&&c.material&&c.material.color){c.userData.oc=c.material.color.clone();c.material.color.set(0xff0000);}});
+        damageFlashTimer=0.2; updateUI();
+        showFloatTextWorld('-'+dmg,'#ff4444',boatGroup.position.x,boatGroup.position.y+2,boatGroup.position.z);
+        if (hp<=0) { hp=0; gameOver(); }
+    }
+    function heal(amount) { hp=Math.min(100,hp+amount); updateUI(); showFloatTextWorld('+'+amount+' 血','#ff69b4',boatGroup.position.x,boatGroup.position.y+2,boatGroup.position.z); playSound('heal'); }
+    function addScore(amount) {
+        amount=amount||10; score+=amount; coinCombo++; coinComboTimer=2.0;
+        if (coinCombo>=10) { coinCombo=0; heal(5); }
+        updateUI(); playSound('coin');
+    }
+
+    function updateUI() {
+        document.getElementById('hp-text').textContent=hp;
+        document.getElementById('hp-bar-fill').style.width=hp+'%';
+        document.getElementById('score-text').textContent=score;
+        document.getElementById('distance-display').textContent='🚣 '+Math.floor(distance)+' 米';
+        document.getElementById('level-display').textContent='🌊 第 '+difficultyLevel+' 关'+(stormActive?' ⛈暴风雨':'');
+    }
+    function updateBoostUI() {
+        const bar=document.getElementById('boost-bar-fill'),st=document.getElementById('boost-status'),lb=document.getElementById('boost-label');
+        if (boostState==='ready'){bar.className='ready';bar.style.width='100%';st.textContent='就绪';st.style.color='#ffd700';lb.textContent='⚡ 加速';}
+        else if (boostState==='active'){bar.className='active';bar.style.width=(boostTimer/BOOST_DURATION*100)+'%';st.textContent=boostTimer.toFixed(1)+'s';st.style.color='#ff6644';lb.textContent='🔥 冲撞中!';}
+        else{bar.className='cooling';bar.style.width=((COOLDOWN_DURATION-boostTimer)/COOLDOWN_DURATION*100)+'%';st.textContent=boostTimer.toFixed(0)+'s';st.style.color='#66aaff';lb.textContent='❄️ 冷却中';}
+    }
+    function updateUltUI() {
+        const bar=document.getElementById('ultimate-bar-fill'),st=document.getElementById('ultimate-status'),lb=document.getElementById('ultimate-label'),cont=document.getElementById('ultimate-container');
+        const ba=bossShip&&!bossShip.userData.destroyed;
+        if (ultState==='ready') { bar.className='ready';bar.style.width='100%'; if(ba){st.textContent='按Q释放!';st.style.color='#ff6600';lb.textContent='🔥 大招 [Q]';cont.classList.add('urgent');} else {st.textContent='就绪';st.style.color='#ffa500';lb.textContent='🔥 大招';cont.classList.remove('urgent');} }
+        else { bar.className='cooling';bar.style.width=((ULT_COOLDOWN-ultTimer)/ULT_COOLDOWN*100)+'%';st.textContent=ultTimer.toFixed(0)+'s';st.style.color='#999';lb.textContent='⏳ 冷却中';cont.classList.remove('urgent'); }
+    }
+    function updateBoost(delta) {
+        const ov=document.getElementById('boost-overlay');
+        if (boostState==='ready') { if (keys['Shift']) { boostState='active';boostTimer=BOOST_DURATION;isBoosting=true;ov.classList.add('active');playSound('boost_start');startBoostSound(); } }
+        else if (boostState==='active') { boostTimer-=delta; if (boostTimer<=0) { boostTimer=0;boostState='cooling';boostTimer=COOLDOWN_DURATION;isBoosting=false;ov.classList.remove('active');stopBoostSound(); } }
+        else { boostTimer-=delta; if (boostTimer<=0) { boostTimer=0;boostState='ready'; } }
+        updateBoostUI();
+    }
+    function updateUltimate(delta) { if (ultState==='cooling') { ultTimer-=delta; if (ultTimer<=0) { ultTimer=0;ultState='ready'; } } updateUltUI(); }
+
+    function updateDifficulty() {
+        const nl=Math.floor(distance/200)+1;
+        if (nl!==difficultyLevel) {
+            difficultyLevel=nl; spawnInterval=Math.max(0.3,0.8-(difficultyLevel-1)*0.05);
+            if (difficultyLevel%3===0&&!stormActive) {
+                stormActive=true; document.getElementById('storm-overlay').classList.add('active');
+                if (scene.userData.skyMat) scene.userData.skyMat.uniforms.uStorm.value=1.0;
+                if (rainParticles) rainParticles.visible=true;
+                scene.userData.sunLight.intensity=0.4; scene.userData.ambientLight.intensity=0.35;
+            } else if (difficultyLevel%3===1&&stormActive) {
+                stormActive=false; document.getElementById('storm-overlay').classList.remove('active');
+                if (scene.userData.skyMat) scene.userData.skyMat.uniforms.uStorm.value=0;
+                if (rainParticles) rainParticles.visible=false;
+                scene.userData.sunLight.intensity=0.9; scene.userData.ambientLight.intensity=0.6;
+            }
+            updateUI();
+        }
+    }
+
+    function updateBoss(delta,time) {
+        if (!bossShip) return;
+        if (bossShip.userData.destroyed) {
+            bossShip.userData.destroyTimer+=delta;
+            const v=bossShip.userData.destroyVel,r=bossShip.userData.destroyRot;
+            bossShip.position.x+=v.x; bossShip.position.y+=v.y; bossShip.position.z+=v.z+getCurrentSpeed()*0.6; v.y-=0.01;
+            bossShip.rotation.x+=r.x; bossShip.rotation.y+=r.y; bossShip.rotation.z+=r.z;
+            if (bossShip.userData.destroyTimer>1.0) { const fp=Math.min((bossShip.userData.destroyTimer-1.0)/1.5,1); bossShip.traverse(c=>{if(c.material){if(!c.userData.o)c.userData.o=c.material.opacity||1;c.material.transparent=true;c.material.opacity=c.userData.o*(1-fp);}}); }
+            if (bossShip.userData.destroyTimer>2.5||bossShip.position.y<-8) { scene.remove(bossShip); bossShip.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();}); const idx=destroyedMonsters.indexOf(bossShip); if(idx>-1)destroyedMonsters.splice(idx,1); bossShip=null; document.getElementById('boss-danger-overlay').classList.remove('active'); }
+            return;
+        }
+        bossShip.position.z+=getCurrentSpeed()*0.55; bossShip.position.x=Math.sin(time*0.5)*1.5; bossShip.position.y=0.3+Math.sin(time*1.5)*0.15;
+        if (bossShip.userData.hpBarFill) { bossShip.userData.hpBarFill.lookAt(camera.position); bossShip.userData.hpBarBg.lookAt(camera.position); }
+        bossShip.userData.cannonTimer+=delta;
+        const ci=Math.max(1.5,3.0-difficultyLevel*0.15);
+        if (bossShip.userData.cannonTimer>=ci&&bossShip.position.z>-40&&bossShip.position.z<10) { bossShip.userData.cannonTimer=0; createCannonball(bossShip.position); }
+        if (checkBossCollision()&&invincibleTimer<=0) { takeDamage(15); invincibleTimer=1.5; cameraShake=0.6; }
+        const bd=Math.abs(bossShip.position.z-boatGroup.position.z);
+        document.getElementById('boss-danger-overlay').classList.toggle('active', bd<15);
+        if (bossShip.position.z>20) { scene.remove(bossShip); bossShip.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();}); bossShip=null; document.getElementById('boss-danger-overlay').classList.remove('active'); document.getElementById('ultimate-container').classList.remove('urgent'); stopBossAlarm(); }
+    }
+
+    function gameOver() {
+        gameRunning=false;
+        document.getElementById('final-score').textContent=score;
+        document.getElementById('final-distance').textContent=Math.floor(distance);
+        document.getElementById('final-kills').textContent=bossKills;
+        const nr=saveHighScore(); loadHighScore();
+        document.getElementById('new-record').classList.toggle('show',nr);
+        document.getElementById('game-over-screen').classList.add('visible');
+        document.getElementById('boost-overlay').classList.remove('active');
+        document.getElementById('ultimate-flash').classList.remove('active');
+        document.getElementById('boss-warning').classList.remove('visible');
+        document.getElementById('boss-danger-overlay').classList.remove('active');
+        document.getElementById('storm-overlay').classList.remove('active');
+        stopBoostSound(); stopBossAlarm();
+        if (animationId) { cancelAnimationFrame(animationId); animationId=null; }
+    }
+
+    function resetGame() {
+        stopBoostSound(); stopBossAlarm();
+        objects.forEach(o=>{scene.remove(o);o.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();});}); objects=[];
+        destroyedMonsters.forEach(m=>{scene.remove(m);m.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();});}); destroyedMonsters=[];
+        bossCannonballs.forEach(c=>scene.remove(c)); bossCannonballs=[];
+        hitParticles.forEach(p=>scene.remove(p)); hitParticles=[];
+        if (bossShip) { scene.remove(bossShip); bossShip.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();}); bossShip=null; }
+        hp=100;score=0;distance=0;bossKills=0;boatX=0;boatVelocity=0;invincibleTimer=0;cameraShake=0;hitStopTimer=0;
+        boatKnockback={x:0,z:0};
+        boostState='ready';boostTimer=0;isBoosting=false;hoverRingEmitTimer=0;ultState='ready';ultTimer=0;ultimateEffectTimer=0;ultHitPending=false;ultHitTimer=0;
+        bossSpawnTimer=0;difficultyLevel=1;baseBoatSpeed=0.12;spawnInterval=0.8;spawnTimer=0;stormActive=false;
+        coinCombo=0;coinComboTimer=0;damageFlashTimer=0;
+        currentViewIndex=0;cameraYaw=0;cameraPitch=0;cameraDistance=1.0;cameraTargetYaw=0;cameraTargetPitch=0;cameraTargetDistance=1.0;
+        boatGroup.position.set(0,0.3,2);boatGroup.rotation.set(0,0,0);boatGroup.visible=true;
+        if (hoverGlow) hoverGlow.visible=false;
+        if (hoverRings) hoverRings.forEach(r=>{r.active=false;r.mesh.visible=false;});
+        if (hoverSprayParticles) hoverSprayParticles.visible=false;
+        if (staffGroup) { staffGroup.scale.set(1,1,1); staffGroup.rotation.set(0,0,-Math.PI/5); }
+        if (scene.userData.skyMat) scene.userData.skyMat.uniforms.uStorm.value=0;
+        if (rainParticles) rainParticles.visible=false;
+        scene.userData.sunLight.intensity=0.9; scene.userData.ambientLight.intensity=0.6;
+        document.getElementById('boost-overlay').classList.remove('active');
+        document.getElementById('ultimate-flash').classList.remove('active');
+        document.getElementById('boss-warning').classList.remove('visible');
+        document.getElementById('boss-danger-overlay').classList.remove('active');
+        document.getElementById('storm-overlay').classList.remove('active');
+        document.getElementById('ultimate-container').classList.remove('urgent');
+        updateUI();updateBoostUI();updateUltUI();updateViewName();
+        document.getElementById('game-over-screen').classList.remove('visible');
+    }
+
+    function togglePause() {
+        if (!gameRunning) return;
+        gamePaused=!gamePaused;
+        document.getElementById('pause-screen').classList.toggle('visible',gamePaused);
+        if (gamePaused) clock.getDelta();
+    }
+
+    function updateViewName() { document.getElementById('view-name').textContent=VIEWS[currentViewIndex].name; }
+    function cycleView() { currentViewIndex=(currentViewIndex+1)%VIEWS.length; updateViewName(); cameraTargetYaw=0; cameraTargetPitch=0; }
+
+    function updateCamera(delta) {
+        const view=VIEWS[currentViewIndex];
+        cameraYaw+=(cameraTargetYaw-cameraYaw)*0.1; cameraPitch+=(cameraTargetPitch-cameraPitch)*0.1; cameraDistance+=(cameraTargetDistance-cameraDistance)*0.08;
+        let bo=view.offset.clone(); bo.multiplyScalar(cameraDistance);
+        const cy=Math.cos(cameraYaw),sy=Math.sin(cameraYaw);
+        const rx=bo.x*cy-bo.z*sy, rz=bo.x*sy+bo.z*cy;
+        const hd=Math.sqrt(rx*rx+rz*rz), cp=Math.cos(cameraPitch), sp=Math.sin(cameraPitch);
+        const fy=bo.y*cp+hd*sp*0.3;
+        const tx=boatGroup.position.x+rx*cp, ty=boatGroup.position.y+fy, tz=boatGroup.position.z+rz*cp;
+        if (cameraShake>0) { camera.position.set(tx+(Math.random()-0.5)*cameraShake,ty+(Math.random()-0.5)*cameraShake,tz+(Math.random()-0.5)*cameraShake*0.5); cameraShake*=0.9; }
+        else { camera.position.x+=(tx-camera.position.x)*0.08; camera.position.y+=(ty-camera.position.y)*0.08; camera.position.z+=(tz-camera.position.z)*0.08; }
+        camera.lookAt(boatGroup.position.x*0.5,boatGroup.position.y+view.lookAtY,boatGroup.position.z+view.lookAtZ);
+    }
+
+    function setupMouseControls() {
+        const cv=renderer.domElement;
+        cv.addEventListener('mousedown',e=>{mouseDown=true;mouseX=e.clientX;mouseY=e.clientY;cv.style.cursor='grabbing';});
+        cv.addEventListener('mouseup',()=>{mouseDown=false;cv.style.cursor='grab';});
+        cv.addEventListener('mouseleave',()=>{mouseDown=false;cv.style.cursor='grab';});
+        cv.addEventListener('mousemove',e=>{if(!mouseDown)return;const dx=e.clientX-mouseX,dy=e.clientY-mouseY;cameraTargetYaw-=dx*0.005;cameraTargetPitch+=dy*0.005;cameraTargetPitch=Math.max(-0.6,Math.min(0.6,cameraTargetPitch));mouseX=e.clientX;mouseY=e.clientY;});
+        cv.addEventListener('wheel',e=>{e.preventDefault();cameraTargetDistance+=e.deltaY*0.001;cameraTargetDistance=Math.max(0.4,Math.min(3.0,cameraTargetDistance));},{passive:false});
+        cv.style.cursor='grab';
+    }
+
+    // 收集动画（主循环驱动）
+    function updateCollectingObjects(delta) {
+        for (let i=objects.length-1;i>=0;i--) {
+            const obj=objects[i];
+            if (obj.userData.collecting) {
+                obj.userData.collectScale-=delta*4;
+                obj.scale.setScalar(Math.max(0,obj.userData.collectScale));
+                obj.position.y+=delta*3;
+                if (obj.userData.collectScale<=0) { scene.remove(obj); obj.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();}); objects.splice(i,1); }
+            }
+        }
+    }
+
+    function update() {
+        if (!gameRunning||gamePaused) return;
+        let delta=Math.min(clock.getDelta(),0.05);
+        const time=clock.getElapsedTime();
+
+        // 顿帧
+        if (hitStopTimer>0) { hitStopTimer-=delta; delta*=0.1; }
+
+        updateBoost(delta); updateUltimate(delta); updateUltimateEffect(delta,time);
+        const currentSpeed=getCurrentSpeed(); distance+=currentSpeed;
+        updateDifficulty();
+
+        // 加速度移动模型
+        if (keys['a']||keys['A']||keys['ArrowLeft']) boatVelocity-=MOVE_ACCEL;
+        else if (keys['d']||keys['D']||keys['ArrowRight']) boatVelocity+=MOVE_ACCEL;
+        else boatVelocity*=MOVE_FRICTION;
+        boatVelocity=Math.max(-MOVE_MAX_SPEED,Math.min(MOVE_MAX_SPEED,boatVelocity));
+        boatX+=boatVelocity;
+        // 边界反弹
+        if (boatX<-laneWidth) { boatX=-laneWidth; boatVelocity=Math.abs(boatVelocity)*0.3; cameraShake=Math.max(cameraShake,0.1); }
+        if (boatX>laneWidth) { boatX=laneWidth; boatVelocity=-Math.abs(boatVelocity)*0.3; cameraShake=Math.max(cameraShake,0.1); }
+        // 击退
+        boatX+=boatKnockback.x; boatKnockback.x*=0.8; boatKnockback.z*=0.8;
+        boatX=Math.max(-laneWidth,Math.min(laneWidth,boatX));
+        boatGroup.position.x=boatX;
+        boatGroup.rotation.z=boatVelocity*2+boatKnockback.x*0.5;
+        boatGroup.position.y=0.3+Math.sin(time*(isBoosting?3.5:2))*(isBoosting?0.15:0.08);
+
+        // 船桨
+        const ps=isBoosting?8:4;
+        const pL=boatGroup.getObjectByName('paddleL'),pR=boatGroup.getObjectByName('paddleR');
+        if(pL)pL.rotation.x=Math.sin(time*ps)*0.4; if(pR)pR.rotation.x=Math.sin(time*ps+Math.PI)*0.4;
+        if(wukongGroup.userData.head) wukongGroup.userData.head.rotation.z=Math.sin(time*2)*0.05;
+        if(wukongGroup.userData.cape) wukongGroup.userData.cape.rotation.x=-Math.PI/8+Math.sin(time*3)*0.05;
+
+        // 加速光环
+        const r1=boatGroup.getObjectByName('boostRing'),r2=boatGroup.getObjectByName('boostRing2');
+        if(r1&&r2){if(isBoosting){r1.material.opacity=0.6+Math.sin(time*8)*0.2;r1.scale.set(1+Math.sin(time*6)*0.15,1+Math.sin(time*6)*0.15,1);r1.rotation.z=time*2;r2.material.opacity=0.4+Math.sin(time*8+1)*0.2;r2.scale.set(1.3+Math.sin(time*6+1)*0.15,1.3+Math.sin(time*6+1)*0.15,1);r2.rotation.z=-time*1.5;}else{r1.material.opacity=0;r2.material.opacity=0;}}
+
+        // 受伤颜色恢复
+        if (damageFlashTimer>0) { damageFlashTimer-=delta; if (damageFlashTimer<=0) boatGroup.traverse(c=>{if(c.isMesh&&c.userData.oc)c.material.color.copy(c.userData.oc);}); }
+
+        // 无敌闪烁
+        if (invincibleTimer>0) { invincibleTimer-=delta; boatGroup.visible=Math.floor(time*10)%2===0; } else boatGroup.visible=true;
+
+        // 连击计时
+        if (coinComboTimer>0) { coinComboTimer-=delta; if (coinComboTimer<=0) coinCombo=0; }
+
+        // 更新物体
+        for (let i=objects.length-1;i>=0;i--) {
+            const obj=objects[i];
+            if (obj.userData.destroyed||obj.userData.collecting) continue;
+            const prevZ=obj.position.z;
+            obj.position.z+=currentSpeed*0.6;
+            if (obj.userData.type===TYPE_COIN) { obj.rotation.y+=0.06; obj.position.y=1.0+Math.sin(time*3+obj.position.x)*0.15; }
+            if (obj.userData.type===TYPE_HEAL) { obj.rotation.y+=0.04; obj.position.y=1.0+Math.sin(time*2+obj.position.x)*0.12; if(obj.userData.glow)obj.userData.glow.material.opacity=0.3+Math.sin(time*4)*0.2; }
+            if (obj.userData.type===TYPE_MONSTER) { obj.rotation.y+=0.02; if(obj.userData.monsterType==='jellyfish'&&obj.userData.floatBase!==undefined)obj.position.y=obj.userData.floatBase+Math.sin(time*2+obj.position.x)*0.2; else obj.position.y+=Math.sin(time*3)*0.01; obj.position.x+=Math.sin(time*2+obj.position.z*0.1)*0.01; }
+            if (!obj.userData.passed) {
+                if (checkCollisionContinuous(obj,prevZ)) {
+                    if (obj.userData.type===TYPE_COIN) { obj.userData.passed=true; obj.userData.collecting=true; obj.userData.collectScale=1; addScore(10); }
+                    else if (obj.userData.type===TYPE_HEAL) { obj.userData.passed=true; obj.userData.collecting=true; obj.userData.collectScale=1; heal(20); }
+                    else if (obj.userData.type===TYPE_MONSTER) { obj.userData.passed=true; if(isBoosting)destroyMonster(obj); else takeDamage(10); }
+                    else if (obj.userData.type===TYPE_OBSTACLE) { obj.userData.passed=true; takeDamage(10); }
+                }
+            }
+            if (obj.position.z>15) { scene.remove(obj); obj.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();}); objects.splice(i,1); }
+        }
+
+        updateCollectingObjects(delta);
+        updateDestroyedMonsters(delta);
+        updateBoss(delta,time);
+        updateCannonballs(delta);
+        updateHitParticles(delta);
+
+        // 生成物体（基于计时器）
+        spawnTimer+=delta;
+        if (spawnTimer>=spawnInterval) { spawnTimer=0; spawnObject(); if (Math.random()<0.15+difficultyLevel*0.02) spawnObject(); }
+
+        // BOSS生成
+        bossSpawnTimer+=delta;
+        if (bossSpawnTimer>=bossSpawnInterval&&(!bossShip||bossShip.userData.destroyed)) { trySpawnBoss(); bossSpawnTimer=0; }
+
+        updateOcean(time); updateFoam(delta,time); updateClouds(); updateRain(delta);
+        oceanMesh.position.z=-120+(distance*0.6*(isBoosting?boostSpeedMultiplier:1))%60;
+        updateCamera(delta);
+    }
+
+    function animate() {
+        animationId=requestAnimationFrame(animate);
+        update(); renderer.render(scene,camera);
+    }
+
+    function startGame() {
+        document.getElementById('loading').style.display='none';
+        document.getElementById('start-screen').classList.remove('hidden');
+        document.getElementById('start-screen').style.display='flex';
+    }
+    function beginPlay() {
+        initAudio();
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('ui-top').style.display='flex';
+        document.getElementById('left-ui-bottom').style.display='block';
+        document.getElementById('controls-hint').style.display='block';
+        document.getElementById('view-indicator').style.display='block';
+        startAmbient();
+        resetGame(); gameRunning=true; gamePaused=false;
+        if (!animationId) animate();
+    }
+
+    document.addEventListener('keydown',e=>{
+        keys[e.key]=true;
+        if((e.key==='c'||e.key==='C')&&gameRunning&&!gamePaused)cycleView();
+        if((e.key==='q'||e.key==='Q')&&gameRunning&&!gamePaused)triggerUltimate();
+        if((e.key==='p'||e.key==='P'||e.key==='Escape')&&gameRunning)togglePause();
+        if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))e.preventDefault();
+    });
+    document.addEventListener('keyup',e=>{keys[e.key]=false;});
+    window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden&&gameRunning&&!gamePaused)togglePause();});
+    document.getElementById('start-btn').addEventListener('click',beginPlay);
+    document.getElementById('restart-btn').addEventListener('click',()=>{document.getElementById('game-over-screen').classList.remove('visible');beginPlay();});
+    document.getElementById('resume-btn').addEventListener('click',togglePause);
+    document.getElementById('restart-from-pause-btn').addEventListener('click',()=>{document.getElementById('pause-screen').classList.remove('visible');gamePaused=false;beginPlay();});
+    document.getElementById('audio-toggle').addEventListener('click',toggleAudio);
+
+    initScene(); setupMouseControls(); loadHighScore(); startGame(); animate();
+    console.log('齐天大圣·海面划船大冒险 v5.0 初始化完成');
+    </script>
+</body>
+</html>
