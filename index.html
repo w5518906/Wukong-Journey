@@ -147,11 +147,8 @@
         <div id="new-record">🎉 新纪录！🎉</div>
         <button id="restart-btn">再来一局</button>
     </div>
-    <script type="importmap">
-    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
-    </script>
-    <script type="module">
-    import * as THREE from 'three';
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script>
     // ============ 全局变量 ============
     let scene, camera, renderer, clock;
     let boatGroup, wukongGroup, staffGroup;
