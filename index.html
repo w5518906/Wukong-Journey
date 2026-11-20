@@ -147,7 +147,7 @@
         <div id="new-record">🎉 新纪录！🎉</div>
         <button id="restart-btn">再来一局</button>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
     <script>
     // ============ 全局变量 ============
     let scene, camera, renderer, clock;
@@ -362,7 +362,12 @@
         scene.background = new THREE.Color(0x87CEEB);
         camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 500);
         camera.position.set(0,5,8); camera.lookAt(0,1.5,-8);
-        renderer = new THREE.WebGLRenderer({ antialias: window.devicePixelRatio < 2 });
+        try {
+            renderer = new THREE.WebGLRenderer({ antialias: window.devicePixelRatio < 2 });
+        } catch(e) {
+            document.getElementById('start-loading').innerHTML = '<div style="color:#ff6666;font-size:18px;text-align:center;padding:40px;">⚠️ 您的浏览器不支持 WebGL，请使用 Chrome/Edge/Firefox 最新版浏览器<br><br>WebGL is not supported in your browser.</div>';
+            return;
+        }
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
         renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.BasicShadowMap;
