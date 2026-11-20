@@ -720,8 +720,8 @@
         const hull=new THREE.Mesh(hullGeo,dwMat); hull.scale.set(1.2,1,1); hull.position.y=0.5; hull.castShadow=true; g.add(hull);
         const deck=new THREE.Mesh(new THREE.BoxGeometry(4,0.3,7),wMat); deck.position.y=1.0; deck.castShadow=true; g.add(deck);
         const railGeo=new THREE.BoxGeometry(0.2,0.6,6);
-        g.add(Object.assign(new THREE.Mesh(railGeo,dwMat),{position:new THREE.Vector3(-2,1.3,0)}));
-        g.add(Object.assign(new THREE.Mesh(railGeo,dwMat),{position:new THREE.Vector3(2,1.3,0)}));
+        const railL=new THREE.Mesh(railGeo,dwMat); railL.position.set(-2,1.3,0); g.add(railL);
+        const railR=new THREE.Mesh(railGeo,dwMat); railR.position.set(2,1.3,0); g.add(railR);
         const mastGeo=new THREE.CylinderGeometry(0.12,0.15,4,8);
         for(let i=0;i<3;i++){const m=new THREE.Mesh(mastGeo,wMat);m.position.set(0,3,-2.5+i*2.5);m.castShadow=true;g.add(m);}
         const sailMat=new THREE.MeshPhongMaterial({color:0x1a1a1a,side:THREE.DoubleSide,transparent:true,opacity:0.9}), sailGeo=new THREE.PlaneGeometry(3.5,2.5);
@@ -730,8 +730,8 @@
         const s3=new THREE.Mesh(sailGeo.clone(),sailMat.clone()); s3.position.set(0,3.2,2.5); g.add(s3);
         const skull=new THREE.Mesh(new THREE.SphereGeometry(0.4,10,8),boneMat); skull.position.set(0,3.3,0.01); skull.scale.set(1,1.1,0.3); g.add(skull);
         const eSockMat=new THREE.MeshBasicMaterial({color:0x000000});
-        g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),eSockMat),{position:new THREE.Vector3(-0.13,3.35,0.12)}));
-        g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),eSockMat),{position:new THREE.Vector3(0.13,3.35,0.12)}));
+        const skL=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),eSockMat); skL.position.set(-0.13,3.35,0.12); g.add(skL);
+        const skR=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),eSockMat); skR.position.set(0.13,3.35,0.12); g.add(skR);
         const boneGeo=new THREE.CylinderGeometry(0.05,0.05,0.6,6);
         const b1=new THREE.Mesh(boneGeo,boneMat); b1.position.set(0,2.7,0.01); b1.rotation.z=Math.PI/4; g.add(b1);
         const b2=new THREE.Mesh(boneGeo,boneMat); b2.position.set(0,2.7,0.01); b2.rotation.z=-Math.PI/4; g.add(b2);
@@ -741,8 +741,8 @@
         const hL=new THREE.Mesh(hornGeo,fhMat); hL.position.set(-0.25,1.7,-4.2); hL.rotation.z=-0.3; g.add(hL);
         const hR=new THREE.Mesh(hornGeo,fhMat); hR.position.set(0.25,1.7,-4.2); hR.rotation.z=0.3; g.add(hR);
         const bEyeMat=new THREE.MeshPhongMaterial({color:0xff0000,emissive:0xff0000,emissiveIntensity:1.0});
-        g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),bEyeMat),{position:new THREE.Vector3(-0.15,1.3,-4.55)}));
-        g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),bEyeMat),{position:new THREE.Vector3(0.15,1.3,-4.55)}));
+        const beL=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),bEyeMat); beL.position.set(-0.15,1.3,-4.55); g.add(beL);
+        const beR=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),bEyeMat); beR.position.set(0.15,1.3,-4.55); g.add(beR);
         const cannonGeo=new THREE.CylinderGeometry(0.15,0.18,0.8,10), cannonMat=new THREE.MeshPhongMaterial({color:0x333333,shininess:50});
         for(let i=0;i<2;i++){const cL=new THREE.Mesh(cannonGeo,cannonMat);cL.position.set(-1.8,1.4,-1+i*2);cL.rotation.z=Math.PI/2;cL.rotation.y=-Math.PI/2;g.add(cL); const cR=new THREE.Mesh(cannonGeo,cannonMat);cR.position.set(1.8,1.4,-1+i*2);cR.rotation.z=Math.PI/2;cR.rotation.y=Math.PI/2;g.add(cR);}
         const crewMat=new THREE.MeshPhongMaterial({color:0x1a4a1a,flatShading:true});
